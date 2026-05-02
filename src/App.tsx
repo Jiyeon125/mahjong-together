@@ -16,6 +16,7 @@ import {
   fetchTables,
   joinTable,
   leaveTable,
+  updateUserNickname,
   validateTableTimeRange,
 } from "./services/tableService";
 import { buildIsoRangeFromHHmm } from "./utils/date";
@@ -82,7 +83,12 @@ function App() {
   const [messageTone, setMessageTone] = useState<MessageTone>("info");
   const [shareFallbackText, setShareFallbackText] = useState("");
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [nicknameSaving, setNicknameSaving] = useState(false);
+  const [joiningTableId, setJoiningTableId] = useState<string | null>(null);
+  const [leavingTableId, setLeavingTableId] = useState<string | null>(null);
+  const [manageTableId, setManageTableId] = useState<string | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [pendingJoinTableId, setPendingJoinTableId] = useState<string | null>(null);
@@ -101,6 +107,12 @@ function App() {
 
   const refreshFromServer = async () => {
     await expireOldTables();
+    const [nextTables, nextParticipants] = await Promise.all([fetchTables(), fetchParticipants()]);
+    setTables(applyEffectiveStatuses(nextTables, nextParticipants));
+    setParticipants(nextParticipants);
+  };
+
+  const reloadListsOnly = async () => {
     const [nextTables, nextParticipants] = await Promise.all([fetchTables(), fetchParticipants()]);
     setTables(applyEffectiveStatuses(nextTables, nextParticipants));
     setParticipants(nextParticipants);
@@ -146,9 +158,27 @@ function App() {
     setSelectedTableId(tableId);
   };
 
+  const normalizedParticipants = useMemo(() => {
+    const latestNickname = currentUser.nickname.trim();
+    if (!latestNickname) return participants;
+    return participants.map((participant) =>
+      participant.userId === currentUser.userId
+        ? { ...participant, nickname: latestNickname }
+        : participant,
+    );
+  }, [participants, currentUser.userId, currentUser.nickname]);
+
+  const normalizedTables = useMemo(() => {
+    const latestNickname = currentUser.nickname.trim();
+    if (!latestNickname) return tables;
+    return tables.map((table) =>
+      table.hostUserId === currentUser.userId ? { ...table, hostNickname: latestNickname } : table,
+    );
+  }, [tables, currentUser.userId, currentUser.nickname]);
+
   const effectiveTables = useMemo(
-    () => applyEffectiveStatuses(tables, participants),
-    [tables, participants],
+    () => applyEffectiveStatuses(normalizedTables, normalizedParticipants),
+    [normalizedTables, normalizedParticipants],
   );
 
   useEffect(() => {
@@ -169,10 +199,10 @@ function App() {
 
   const selectedParticipants = useMemo(() => {
     if (!selectedTableId) return [];
-    return participants
+    return normalizedParticipants
       .filter((participant) => participant.tableId === selectedTableId)
       .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
-  }, [participants, selectedTableId]);
+  }, [normalizedParticipants, selectedTableId]);
   const hasNickname = isNicknameValid(currentUser.nickname);
 
   const visibleTables = useMemo(() => {
@@ -191,21 +221,65 @@ function App() {
   }, [effectiveTables, filter]);
 
   const getJoinStateForTable = (table: MahjongTable) => {
-    const tableParticipants = participants.filter((participant) => participant.tableId === table.id);
+    const tableParticipants = normalizedParticipants.filter(
+      (participant) => participant.tableId === table.id,
+    );
     return getJoinButtonState(table, tableParticipants, currentUser.userId, hasNickname);
   };
 
-  const handleSaveNickname = (nickname: string) => {
+  const handleSaveNickname = async (nickname: string): Promise<boolean> => {
     const trimmed = nickname.trim();
     if (!isNicknameValid(trimmed)) {
       setMessage("닉네임은 공백 없이 1~20자로 입력해주세요.");
       setMessageTone("error");
-      return;
+      return false;
     }
-    setCurrentUser((prev) => ({ ...prev, nickname: trimmed }));
-    setShowNicknameSetupHint(false);
-    setMessage("닉네임이 저장되었습니다.");
-    setMessageTone("success");
+
+    if (trimmed === currentUser.nickname.trim()) {
+      setShowNicknameSetupHint(false);
+      return true;
+    }
+
+    setNicknameSaving(true);
+    try {
+      await updateUserNickname(currentUser.userId, trimmed);
+      const nextUser = { ...currentUser, nickname: trimmed };
+      saveCurrentUser(nextUser);
+      setCurrentUser(nextUser);
+      setShowNicknameSetupHint(false);
+
+      // 닉네임 변경 직후에는 화면을 먼저 동기화해 즉시 반영한다.
+      setParticipants((prev) =>
+        prev.map((participant) =>
+          participant.userId === currentUser.userId
+            ? { ...participant, nickname: trimmed }
+            : participant,
+        ),
+      );
+      setTables((prev) =>
+        prev.map((table) =>
+          table.hostUserId === currentUser.userId ? { ...table, hostNickname: trimmed } : table,
+        ),
+      );
+
+      // 서버 최종값으로 재동기화 (닉네임 변경 성공 자체와 분리)
+      try {
+        await reloadListsOnly();
+      } catch (refreshError) {
+        console.error("닉네임 변경 후 목록 재조회 실패:", refreshError);
+      }
+
+      setMessage("닉네임이 변경되었습니다.");
+      setMessageTone("success");
+      return true;
+    } catch (error) {
+      console.error(error);
+      setMessage("닉네임 변경에 실패했습니다. 다시 시도해주세요.");
+      setMessageTone("error");
+      return false;
+    } finally {
+      setNicknameSaving(false);
+    }
   };
 
   const handleCreateTable = async (input: CreateTableInput) => {
@@ -239,7 +313,7 @@ function App() {
     }
 
     const playerRange = getMemberRange(input.memberType);
-    setActionLoading(true);
+    setCreateLoading(true);
     try {
       const createdTableId = await createTable({
         title,
@@ -263,12 +337,12 @@ function App() {
       setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
       setMessageTone("error");
     } finally {
-      setActionLoading(false);
+      setCreateLoading(false);
     }
   };
 
   const doJoin = async (tableId: string, nickname: string) => {
-    setActionLoading(true);
+    setJoiningTableId(tableId);
     try {
       await joinTable(tableId, { ...currentUser, nickname: nickname.trim() });
       await refreshFromServer();
@@ -279,7 +353,7 @@ function App() {
       setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
       setMessageTone("error");
     } finally {
-      setActionLoading(false);
+      setJoiningTableId((prev) => (prev === tableId ? null : prev));
     }
   };
 
@@ -296,13 +370,13 @@ function App() {
     }
 
     if (isTableExpired(table) && ["RECRUITING", "READY"].includes(table.status)) {
-      setActionLoading(true);
+      setJoiningTableId(tableId);
       try {
         await refreshFromServer();
       } catch (error) {
         console.error(error);
       } finally {
-        setActionLoading(false);
+        setJoiningTableId((prev) => (prev === tableId ? null : prev));
       }
       setMessage("시간이 지난 탁에는 참가할 수 없습니다.");
       setMessageTone("error");
@@ -338,7 +412,7 @@ function App() {
       return;
     }
 
-    setActionLoading(true);
+    setLeavingTableId(tableId);
     try {
       await leaveTable(tableId, currentUser);
       await refreshFromServer();
@@ -349,7 +423,7 @@ function App() {
       setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
       setMessageTone("error");
     } finally {
-      setActionLoading(false);
+      setLeavingTableId((prev) => (prev === tableId ? null : prev));
     }
   };
 
@@ -364,8 +438,8 @@ function App() {
   const handleConfirmAction = async () => {
     if (!confirmAction) return;
     const action = confirmAction;
-    setConfirmAction(null);
-    setActionLoading(true);
+    setManageTableId(action.tableId);
+    setConfirmLoading(true);
     try {
       if (action.kind === "close") {
         await closeTable(action.tableId, currentUser);
@@ -379,12 +453,14 @@ function App() {
         setMessage("탁이 취소되었습니다.");
         setMessageTone("success");
       }
+      setConfirmAction(null);
     } catch (error) {
       console.error(error);
       setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
       setMessageTone("error");
     } finally {
-      setActionLoading(false);
+      setConfirmLoading(false);
+      setManageTableId((prev) => (prev === action.tableId ? null : prev));
     }
   };
 
@@ -408,7 +484,7 @@ function App() {
     const table = effectiveTables.find((item) => item.id === tableId);
     if (!table) return;
 
-    const tableParticipants = participants
+    const tableParticipants = normalizedParticipants
       .filter((participant) => participant.tableId === tableId)
       .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
     const detailUrl = `${window.location.origin}/tables/${encodeURIComponent(table.id)}`;
@@ -445,7 +521,7 @@ function App() {
   const selectedExpiredNotice =
     !!selectedTable && (selectedTable.status === "EXPIRED" || isTableExpired(selectedTable));
   const joinedTableIds = new Set(
-    participants
+    normalizedParticipants
       .filter((participant) => participant.userId === currentUser.userId)
       .map((participant) => participant.tableId),
   );
@@ -486,6 +562,7 @@ function App() {
         <NicknameBox
           currentUser={currentUser}
           showSetupHint={showNicknameSetupHint}
+          isSaving={nicknameSaving}
           onSaveNickname={handleSaveNickname}
         />
       </div>
@@ -577,6 +654,7 @@ function App() {
         <NicknameBox
           currentUser={currentUser}
           showSetupHint={showNicknameSetupHint}
+          isSaving={nicknameSaving}
           onSaveNickname={handleSaveNickname}
         />
       )}
@@ -587,8 +665,10 @@ function App() {
           participants={selectedParticipants}
           currentUserId={currentUser.userId}
           joinButtonState={selectedJoinState}
+          isJoinLoading={joiningTableId === selectedTable.id}
+          isLeaveLoading={leavingTableId === selectedTable.id}
+          isManageLoading={manageTableId === selectedTable.id}
           leaveDisabled={selectedLeaveDisabled}
-          isActionLoading={actionLoading}
           expiredNotice={selectedExpiredNotice}
           onCopyShare={() => handleCopyShareText(selectedTable.id)}
           onJoin={() => handleJoinTable(selectedTable.id)}
@@ -608,8 +688,8 @@ function App() {
       ) : (
         <>
           <TableForm
-            disabled={!isNicknameValid(currentUser.nickname) || actionLoading}
-            isActionLoading={actionLoading}
+            disabled={!isNicknameValid(currentUser.nickname) || createLoading}
+            isActionLoading={createLoading}
             isOpen={isCreateFormOpen}
             onToggleOpen={() => setIsCreateFormOpen((prev) => !prev)}
             onCreate={(input) => void handleCreateTable(input)}
@@ -648,9 +728,9 @@ function App() {
               <h2 className="section-title">내가 참가한 탁</h2>
               <TableList
                 tables={myJoinedTables}
-                participants={participants}
+                participants={normalizedParticipants}
                 getJoinButtonState={getJoinStateForTable}
-                isActionLoading={actionLoading}
+                joiningTableId={joiningTableId}
                 onJoin={(tableId) => void handleJoinTable(tableId)}
                 onDetail={navigateToTableDetail}
                 onCopyShare={handleCopyShareText}
@@ -666,9 +746,9 @@ function App() {
             <h2 className="section-title">현재 모집 중인 탁</h2>
           <TableList
             tables={otherVisibleTables}
-            participants={participants}
+            participants={normalizedParticipants}
             getJoinButtonState={getJoinStateForTable}
-            isActionLoading={actionLoading}
+            joiningTableId={joiningTableId}
             onJoin={(tableId) => void handleJoinTable(tableId)}
             onDetail={navigateToTableDetail}
             onCopyShare={handleCopyShareText}
@@ -697,7 +777,7 @@ function App() {
                 type="button"
                 className={confirmAction.kind === "close" ? "btn-secondary" : "btn-danger"}
                 onClick={() => void handleConfirmAction()}
-                disabled={actionLoading}
+                disabled={confirmLoading}
               >
                 {confirmAction.kind === "close" ? "마감하기" : "취소하기"}
               </button>

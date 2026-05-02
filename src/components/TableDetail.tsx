@@ -13,8 +13,10 @@ type TableDetailProps = {
   participants: Participant[];
   currentUserId: string;
   joinButtonState: JoinButtonState;
+  isJoinLoading: boolean;
+  isLeaveLoading: boolean;
+  isManageLoading: boolean;
   leaveDisabled: boolean;
-  isActionLoading: boolean;
   expiredNotice: boolean;
   onCopyShare: () => void;
   onJoin: () => void;
@@ -29,8 +31,10 @@ export function TableDetail({
   participants,
   currentUserId,
   joinButtonState,
+  isJoinLoading,
+  isLeaveLoading,
+  isManageLoading,
   leaveDisabled,
-  isActionLoading,
   expiredNotice,
   onCopyShare,
   onJoin,
@@ -40,7 +44,7 @@ export function TableDetail({
   onBack,
 }: TableDetailProps) {
   const isHost = table.hostUserId === currentUserId;
-  const joinButtonLabel = isActionLoading ? "처리 중..." : joinButtonState.label;
+  const joinButtonLabel = isJoinLoading ? "처리 중..." : joinButtonState.label;
   const isBlockedJoinState =
     joinButtonState.disabled &&
     ["정원 마감", "모집 마감됨", "만료됨", "취소됨", "참가 불가"].includes(joinButtonState.label);
@@ -84,7 +88,7 @@ export function TableDetail({
               type="button"
               className={joinButtonClassName}
               onClick={onJoin}
-              disabled={joinButtonState.disabled || isActionLoading}
+              disabled={joinButtonState.disabled || isJoinLoading}
               title={joinButtonState.reason}
             >
               {joinButtonLabel}
@@ -93,9 +97,9 @@ export function TableDetail({
               type="button"
               className="btn-warn-ghost"
               onClick={onLeave}
-              disabled={leaveDisabled || isActionLoading}
+              disabled={leaveDisabled || isLeaveLoading}
             >
-              탁 나가기
+              {isLeaveLoading ? "처리 중..." : "탁 나가기"}
             </button>
           </>
         ) : (
@@ -104,17 +108,17 @@ export function TableDetail({
               type="button"
                 className="btn-secondary"
               onClick={onClose}
-              disabled={table.status === "CLOSED" || isActionLoading}
+              disabled={table.status === "CLOSED" || isManageLoading}
             >
-              {isActionLoading ? "처리 중..." : "모집 마감"}
+              {isManageLoading ? "처리 중..." : "모집 마감"}
             </button>
             <button
               type="button"
                 className="btn-danger"
               onClick={onCancel}
-              disabled={table.status === "CANCELLED" || isActionLoading}
+              disabled={table.status === "CANCELLED" || isManageLoading}
             >
-              {isActionLoading ? "처리 중..." : "탁 취소"}
+              {isManageLoading ? "처리 중..." : "탁 취소"}
             </button>
           </>
         )}

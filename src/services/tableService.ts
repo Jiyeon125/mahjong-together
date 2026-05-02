@@ -124,6 +124,25 @@ export async function fetchParticipants(): Promise<Participant[]> {
   return (data as ParticipantRow[]).map(mapParticipantRowToModel);
 }
 
+export async function updateUserNickname(userId: string, newNickname: string): Promise<void> {
+  ensureSupabaseReady();
+
+  const { error: participantError } = await supabase
+    .from("table_participants")
+    .update({ nickname: newNickname })
+    .eq("user_id", userId);
+  if (participantError) throw participantError;
+
+  const { error: hostTableError } = await supabase
+    .from("mahjong_tables")
+    .update({
+      host_nickname: newNickname,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("host_user_id", userId);
+  if (hostTableError) throw hostTableError;
+}
+
 export async function createTable(input: CreateTablePayload): Promise<string> {
   ensureSupabaseReady();
   validateTableTimeRange(input.endTime);

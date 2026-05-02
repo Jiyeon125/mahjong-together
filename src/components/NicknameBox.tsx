@@ -4,10 +4,16 @@ import type { CurrentUser } from "../types";
 type NicknameBoxProps = {
   currentUser: CurrentUser;
   showSetupHint: boolean;
-  onSaveNickname: (nickname: string) => void;
+  isSaving?: boolean;
+  onSaveNickname: (nickname: string) => Promise<boolean>;
 };
 
-export function NicknameBox({ currentUser, showSetupHint, onSaveNickname }: NicknameBoxProps) {
+export function NicknameBox({
+  currentUser,
+  showSetupHint,
+  isSaving = false,
+  onSaveNickname,
+}: NicknameBoxProps) {
   const [nicknameInput, setNicknameInput] = useState(currentUser.nickname);
   const [isEditing, setIsEditing] = useState(!currentUser.nickname.trim());
 
@@ -18,9 +24,9 @@ export function NicknameBox({ currentUser, showSetupHint, onSaveNickname }: Nick
     }
   }, [currentUser.nickname]);
 
-  const save = () => {
-    onSaveNickname(nicknameInput);
-    if (nicknameInput.trim()) {
+  const save = async () => {
+    const saved = await onSaveNickname(nicknameInput);
+    if (saved) {
       setIsEditing(false);
     }
   };
@@ -53,8 +59,13 @@ export function NicknameBox({ currentUser, showSetupHint, onSaveNickname }: Nick
         />
       </div>
       <div className="actions">
-        <button type="button" className="btn-primary" onClick={save}>
-          닉네임 저장
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={() => void save()}
+          disabled={isSaving}
+        >
+          {isSaving ? "저장 중..." : "닉네임 저장"}
         </button>
       </div>
     </section>

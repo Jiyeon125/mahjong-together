@@ -13,7 +13,7 @@ type TableCardProps = {
   table: MahjongTable;
   participants: Participant[];
   joinButtonState: JoinButtonState;
-  isActionLoading: boolean;
+  isJoinLoading: boolean;
   onJoin: (tableId: string) => void;
   onDetail: (tableId: string) => void;
   onCopyShare: (tableId: string) => void;
@@ -23,14 +23,14 @@ export function TableCard({
   table,
   participants,
   joinButtonState,
-  isActionLoading,
+  isJoinLoading,
   onJoin,
   onDetail,
   onCopyShare,
 }: TableCardProps) {
   const progressPercent = Math.min(100, Math.round((participants.length / table.maxPlayers) * 100));
   const capacityHint = getCapacityHint(table, participants.length);
-  const joinButtonText = isActionLoading ? "처리 중..." : joinButtonState.label;
+  const joinButtonText = isJoinLoading ? "처리 중..." : joinButtonState.label;
   const isBlockedJoinState =
     joinButtonState.disabled &&
     ["정원 마감", "모집 마감됨", "만료됨", "취소됨", "참가 불가"].includes(joinButtonState.label);
@@ -90,7 +90,7 @@ export function TableCard({
             event.stopPropagation();
             onJoin(table.id);
           }}
-          disabled={joinButtonState.disabled || isActionLoading}
+          disabled={joinButtonState.disabled || isJoinLoading}
           title={joinButtonState.reason}
         >
           {joinButtonText}
