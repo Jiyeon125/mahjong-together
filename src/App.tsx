@@ -60,7 +60,7 @@ function getReadableErrorMessage(error: unknown, fallback: string): string {
 }
 
 type MessageTone = "success" | "error" | "info";
-type ConfirmAction = { kind: "close" | "cancel"; tableId: string };
+type ConfirmAction = { kind: "close" | "cancel" | "leave"; tableId: string };
 
 function parseTableIdFromPath(pathname: string): string | null {
   if (pathname === "/" || pathname === "/tables") return null;
@@ -395,6 +395,22 @@ function App() {
     await doJoin(tableId, currentUser.nickname);
   };
 
+  const executeLeaveTable = async (tableId: string) => {
+    setLeavingTableId(tableId);
+    try {
+      await leaveTable(tableId, currentUser);
+      await refreshFromServer();
+      setMessage("탁에서 나갔습니다.");
+      setMessageTone("success");
+    } catch (error) {
+      console.error(error);
+      setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
+      setMessageTone("error");
+    } finally {
+      setLeavingTableId((prev) => (prev === tableId ? null : prev));
+    }
+  };
+
   const handleLeaveTable = async (tableId: string) => {
     const table = effectiveTables.find((item) => item.id === tableId);
     if (!table) return;
@@ -413,20 +429,7 @@ function App() {
       setMessageTone("error");
       return;
     }
-
-    setLeavingTableId(tableId);
-    try {
-      await leaveTable(tableId, currentUser);
-      await refreshFromServer();
-      setMessage("탁에서 나갔습니다.");
-      setMessageTone("success");
-    } catch (error) {
-      console.error(error);
-      setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
-      setMessageTone("error");
-    } finally {
-      setLeavingTableId((prev) => (prev === tableId ? null : prev));
-    }
+    setConfirmAction({ kind: "leave", tableId });
   };
 
   const handleCloseRecruiting = (tableId: string) => {
@@ -443,7 +446,9 @@ function App() {
     setManageTableId(action.tableId);
     setConfirmLoading(true);
     try {
-      if (action.kind === "close") {
+      if (action.kind === "leave") {
+        await executeLeaveTable(action.tableId);
+      } else if (action.kind === "close") {
         await closeTable(action.tableId, currentUser);
         await refreshFromServer();
         setMessage("모집이 마감되었습니다.");
@@ -779,11 +784,19 @@ function App() {
       {confirmAction && (
         <div className="confirm-backdrop" role="dialog" aria-modal="true">
           <section className="confirm-modal">
-            <h3>{confirmAction.kind === "close" ? "모집 마감" : "탁 취소"}</h3>
+            <h3>
+              {confirmAction.kind === "close"
+                ? "모집 마감"
+                : confirmAction.kind === "cancel"
+                  ? "탁 취소"
+                  : "탁 나가기"}
+            </h3>
             <p>
               {confirmAction.kind === "close"
                 ? "모집을 마감할까요? 마감 후에는 더 이상 참가할 수 없습니다."
-                : "정말 이 탁을 취소할까요? 취소된 탁은 목록에서 보이지 않습니다."}
+                : confirmAction.kind === "cancel"
+                  ? "정말 이 탁을 취소할까요? 취소된 탁은 목록에서 보이지 않습니다."
+                  : "이 탁에서 나갈까요? 나가면 다시 참가 버튼으로 바뀝니다."}
             </p>
             <div className="actions confirm-actions">
               <button type="button" className="btn-ghost" onClick={() => setConfirmAction(null)}>
@@ -791,11 +804,21 @@ function App() {
               </button>
               <button
                 type="button"
-                className={confirmAction.kind === "close" ? "btn-secondary" : "btn-danger"}
+                className={
+                  confirmAction.kind === "close"
+                    ? "btn-secondary"
+                    : confirmAction.kind === "cancel"
+                      ? "btn-danger"
+                      : "btn-warn-ghost"
+                }
                 onClick={() => void handleConfirmAction()}
                 disabled={confirmLoading}
               >
-                {confirmAction.kind === "close" ? "마감하기" : "취소하기"}
+                {confirmAction.kind === "close"
+                  ? "마감하기"
+                  : confirmAction.kind === "cancel"
+                    ? "취소하기"
+                    : "나가기"}
               </button>
             </div>
           </section>
