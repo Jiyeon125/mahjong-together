@@ -22,6 +22,15 @@ import {
 import { buildIsoRangeFromHHmm } from "./utils/date";
 import { buildTableShareText } from "./utils/share";
 import { applyEffectiveStatuses, isTableExpired } from "./utils/tableStatus";
+import {
+  getDescriptionValidationMessage,
+  getNicknameValidationMessage,
+  getTitleValidationMessage,
+  isNicknameValid,
+  normalizeDescription,
+  normalizeNickname,
+  normalizeTitle,
+} from "./utils/validation";
 import { getOrCreateCurrentUser, saveCurrentUser } from "./utils/storage";
 import "./index.css";
 
@@ -32,11 +41,6 @@ function getMemberRange(memberType: MahjongTable["memberType"]): {
   if (memberType === "THREE") return { minPlayers: 3, maxPlayers: 3 };
   if (memberType === "FOUR") return { minPlayers: 4, maxPlayers: 4 };
   return { minPlayers: 3, maxPlayers: 4 };
-}
-
-function isNicknameValid(nickname: string): boolean {
-  const trimmed = nickname.trim();
-  return trimmed.length > 0 && trimmed.length <= 20;
 }
 
 function getReadableErrorMessage(error: unknown, fallback: string): string {
@@ -51,6 +55,9 @@ function getReadableErrorMessage(error: unknown, fallback: string): string {
       "생성자는 탁 나가기 대신 탁 취소를 사용할 수 있습니다.",
       "참가 중인 탁이 아닙니다.",
       "이미 종료된 시간으로는 탁을 생성할 수 없습니다.",
+      "닉네임에는 한글, 영문, 숫자, 공백, ., _, - 만 사용할 수 있습니다.",
+      "제목은 1~40자로 입력해주세요.",
+      "설명은 200자 이내로 입력해주세요.",
     ]);
     if (knownMessages.has(message)) {
       return message;
@@ -231,22 +238,23 @@ function App() {
   };
 
   const handleSaveNickname = async (nickname: string): Promise<boolean> => {
-    const trimmed = nickname.trim();
-    if (!isNicknameValid(trimmed)) {
-      setMessage("닉네임은 공백 없이 1~20자로 입력해주세요.");
+    const normalized = normalizeNickname(nickname);
+    const nicknameError = getNicknameValidationMessage(normalized);
+    if (nicknameError) {
+      setMessage(nicknameError);
       setMessageTone("error");
       return false;
     }
 
-    if (trimmed === currentUser.nickname.trim()) {
+    if (normalized === normalizeNickname(currentUser.nickname)) {
       setShowNicknameSetupHint(false);
       return true;
     }
 
     setNicknameSaving(true);
     try {
-      await updateUserNickname(currentUser.userId, trimmed);
-      const nextUser = { ...currentUser, nickname: trimmed };
+      await updateUserNickname(currentUser.userId, normalized);
+      const nextUser = { ...currentUser, nickname: normalized };
       saveCurrentUser(nextUser);
       setCurrentUser(nextUser);
       setShowNicknameSetupHint(false);
@@ -255,13 +263,13 @@ function App() {
       setParticipants((prev) =>
         prev.map((participant) =>
           participant.userId === currentUser.userId
-            ? { ...participant, nickname: trimmed }
+            ? { ...participant, nickname: normalized }
             : participant,
         ),
       );
       setTables((prev) =>
         prev.map((table) =>
-          table.hostUserId === currentUser.userId ? { ...table, hostNickname: trimmed } : table,
+          table.hostUserId === currentUser.userId ? { ...table, hostNickname: normalized } : table,
         ),
       );
 
@@ -291,9 +299,17 @@ function App() {
       setMessageTone("error");
       return;
     }
-    const title = input.title.trim();
-    if (!title) {
-      setMessage("제목을 입력해주세요.");
+    const title = normalizeTitle(input.title);
+    const titleError = getTitleValidationMessage(title);
+    if (titleError) {
+      setMessage(titleError);
+      setMessageTone("error");
+      return;
+    }
+    const description = normalizeDescription(input.description);
+    const descriptionError = getDescriptionValidationMessage(description);
+    if (descriptionError) {
+      setMessage(descriptionError);
       setMessageTone("error");
       return;
     }
@@ -328,7 +344,7 @@ function App() {
         startTime: range.startIso,
         endTime: range.endIso,
         gameType: input.gameType,
-        description: input.description.trim(),
+        description,
       });
       await refreshFromServer();
       setRecentCreatedTableId(createdTableId);
@@ -473,18 +489,19 @@ function App() {
   };
 
   const handleSaveAndJoin = async () => {
-    const trimmed = joinNicknameInput.trim();
-    if (!isNicknameValid(trimmed)) {
-      setMessage("닉네임은 공백 없이 1~20자로 입력해주세요.");
+    const normalized = normalizeNickname(joinNicknameInput);
+    const nicknameError = getNicknameValidationMessage(normalized);
+    if (nicknameError) {
+      setMessage(nicknameError);
       setMessageTone("error");
       return;
     }
-    setCurrentUser((prev) => ({ ...prev, nickname: trimmed }));
+    setCurrentUser((prev) => ({ ...prev, nickname: normalized }));
     setShowJoinNicknamePrompt(false);
     if (pendingJoinTableId) {
       const targetId = pendingJoinTableId;
       setPendingJoinTableId(null);
-      await doJoin(targetId, trimmed);
+      await doJoin(targetId, normalized);
     }
   };
 

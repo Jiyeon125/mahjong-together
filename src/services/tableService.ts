@@ -1,6 +1,14 @@
 import { assertSupabaseConfigured, supabase } from "../lib/supabase";
 import type { CurrentUser, MahjongTable, Participant } from "../types";
 import { getEffectiveStatus, isTableExpired } from "../utils/tableStatus";
+import {
+  getDescriptionValidationMessage,
+  getNicknameValidationMessage,
+  getTitleValidationMessage,
+  normalizeDescription,
+  normalizeNickname,
+  normalizeTitle,
+} from "../utils/validation";
 import { createUUID } from "../utils/storage";
 
 type TableRow = {
@@ -126,17 +134,22 @@ export async function fetchParticipants(): Promise<Participant[]> {
 
 export async function updateUserNickname(userId: string, newNickname: string): Promise<void> {
   ensureSupabaseReady();
+  const normalizedNickname = normalizeNickname(newNickname);
+  const nicknameError = getNicknameValidationMessage(normalizedNickname);
+  if (nicknameError) {
+    throw new Error(nicknameError);
+  }
 
   const { error: participantError } = await supabase
     .from("table_participants")
-    .update({ nickname: newNickname })
+    .update({ nickname: normalizedNickname })
     .eq("user_id", userId);
   if (participantError) throw participantError;
 
   const { error: hostTableError } = await supabase
     .from("mahjong_tables")
     .update({
-      host_nickname: newNickname,
+      host_nickname: normalizedNickname,
       updated_at: new Date().toISOString(),
     })
     .eq("host_user_id", userId);
@@ -145,8 +158,29 @@ export async function updateUserNickname(userId: string, newNickname: string): P
 
 export async function createTable(input: CreateTablePayload): Promise<string> {
   ensureSupabaseReady();
+  const normalizedTitle = normalizeTitle(input.title);
+  const titleError = getTitleValidationMessage(normalizedTitle);
+  if (titleError) {
+    throw new Error(titleError);
+  }
+  const normalizedHostNickname = normalizeNickname(input.hostNickname);
+  const nicknameError = getNicknameValidationMessage(normalizedHostNickname);
+  if (nicknameError) {
+    throw new Error(nicknameError);
+  }
+  const normalizedDescription = normalizeDescription(input.description ?? "");
+  const descriptionError = getDescriptionValidationMessage(normalizedDescription);
+  if (descriptionError) {
+    throw new Error(descriptionError);
+  }
+
   validateTableTimeRange(input.endTime);
-  const tableInsert = mapTableModelToInsert(input);
+  const tableInsert = mapTableModelToInsert({
+    ...input,
+    title: normalizedTitle,
+    hostNickname: normalizedHostNickname,
+    description: normalizedDescription,
+  });
   const { error: tableError } = await supabase.from("mahjong_tables").insert(tableInsert);
   if (tableError) throw tableError;
 
@@ -154,7 +188,7 @@ export async function createTable(input: CreateTablePayload): Promise<string> {
     id: createUUID(),
     tableId: tableInsert.id,
     userId: input.hostUserId,
-    nickname: input.hostNickname,
+    nickname: normalizedHostNickname,
     joinedAt: new Date().toISOString(),
   };
   const { error: participantError } = await supabase
@@ -228,6 +262,11 @@ async function markExpiredIfNeeded(table: MahjongTable): Promise<boolean> {
 
 export async function joinTable(tableId: string, currentUser: CurrentUser): Promise<void> {
   const { table, tableParticipants } = await getTableAndParticipants(tableId);
+  const normalizedNickname = normalizeNickname(currentUser.nickname);
+  const nicknameError = getNicknameValidationMessage(normalizedNickname);
+  if (nicknameError) {
+    throw new Error(nicknameError);
+  }
 
   if (tableParticipants.some((participant) => participant.userId === currentUser.userId)) {
     throw new Error("이미 참가한 탁입니다.");
@@ -246,7 +285,7 @@ export async function joinTable(tableId: string, currentUser: CurrentUser): Prom
     id: createUUID(),
     tableId,
     userId: currentUser.userId,
-    nickname: currentUser.nickname.trim(),
+    nickname: normalizedNickname,
     joinedAt: new Date().toISOString(),
   };
 

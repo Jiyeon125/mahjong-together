@@ -136,6 +136,7 @@ npm run preview
 ## 시간 처리 규칙
 
 - 입력값은 `HH:mm` 형태
+- 시간 선택은 5분 단위(`step=300`)
 - `end <= start`이면 종료를 다음날로 보정 (예: `23:00 ~ 01:00`)
 - 늦은 밤(예: 23시)에 `00:00 ~ 03:00` 생성 시, 다음날 새벽 시간으로 해석
 - 이미 지난 종료 시각이면 생성 차단
@@ -173,6 +174,33 @@ Vercel SPA 라우팅을 위해 `vercel.json` rewrite 설정을 사용합니다.
 - `ANON`/`PUBLISHABLE` 키는 프론트 노출 가능하지만 RLS 정책이 필수입니다.
 - `.env*`, 인증서/키 파일은 `.gitignore`에 제외되어 있습니다.
 - 사용자 화면에는 내부 식별자(`userId`, `tableId`, `participantId`)를 노출하지 않습니다.
+- 현재 MVP는 Supabase Auth 미도입 상태이며, `localStorage userId`는 강한 신원 보장 수단이 아닙니다.
+- 입력값은 클라이언트/서비스 레이어에서 정규화 및 검증합니다.
+  - 닉네임: 1~20자, 허용 문자(한글/영문/숫자/공백/`.`/`_`/`-`)
+  - 제목: 1~40자
+  - 설명: 200자 이하
+- DB 보안 스크립트:
+  - 권한 최소화: `scripts/supabase-min-privileges.sql`
+  - 제약조건/무결성 강화: `scripts/supabase-hardening.sql`
+
+## DB 보안 적용 순서
+
+Supabase SQL Editor에서 아래 순서로 실행하는 것을 권장합니다.
+
+1. `scripts/supabase-min-privileges.sql`
+2. `scripts/supabase-hardening.sql`
+3. 권한/기능 점검
+   - 권한 확인(`role_table_grants`)에서 `TRUNCATE/TRIGGER/REFERENCES`가 `anon/authenticated`에 없는지 확인
+   - 아래 핵심 시나리오 회귀 테스트
+     1) 탁 목록 조회
+     2) 탁 생성
+     3) 생성자 자동 참가 등록
+     4) 참가하기
+     5) 나가기
+     6) 닉네임 변경 반영
+     7) 모집 마감
+     8) 탁 취소
+     9) 공유 문구 복사
 
 ## MVP 범위 (현재)
 
@@ -180,6 +208,7 @@ Vercel SPA 라우팅을 위해 `vercel.json` rewrite 설정을 사용합니다.
 - 실시간 구독(WebSocket) 없음 (액션 후 재조회 방식)
 - 탁 수정 기능 없음
 - 다국어/다크모드 미지원
+- 위험 액션(모집 마감/탁 취소/탁 나가기)은 커스텀 확인 모달 사용
 
 ---
 
