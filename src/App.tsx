@@ -15,10 +15,11 @@ import {
   fetchTables,
   joinTable,
   leaveTable,
+  validateTableTimeRange,
 } from "./services/tableService";
 import { buildIsoRangeFromHHmm } from "./utils/date";
 import { buildTableShareText } from "./utils/share";
-import { applyEffectiveStatuses } from "./utils/tableStatus";
+import { applyEffectiveStatuses, isTableExpired } from "./utils/tableStatus";
 import { createUUID, getOrCreateCurrentUser, resetLocalCurrentUser, saveCurrentUser } from "./utils/storage";
 import "./index.css";
 
@@ -58,6 +59,7 @@ function App() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const refreshFromServer = async () => {
+    await expireOldTables();
     const [nextTables, nextParticipants] = await Promise.all([fetchTables(), fetchParticipants()]);
     setTables(applyEffectiveStatuses(nextTables, nextParticipants));
     setParticipants(nextParticipants);
@@ -68,7 +70,6 @@ function App() {
       const user = getOrCreateCurrentUser();
       setCurrentUser(user);
       try {
-        await expireOldTables();
         await refreshFromServer();
       } catch (error) {
         console.error(error);
@@ -147,7 +148,7 @@ function App() {
     if (["CLOSED", "CANCELLED", "EXPIRED"].includes(table.status)) {
       return { disabled: true, reason: "마감된 탁에는 참가할 수 없습니다." };
     }
-    if (new Date() > new Date(table.endTime)) {
+    if (isTableExpired(table)) {
       return { disabled: true, reason: "시간이 지난 탁에는 참가할 수 없습니다." };
     }
     return { disabled: false };
@@ -187,8 +188,11 @@ function App() {
     let range: { startIso: string; endIso: string };
     try {
       range = buildIsoRangeFromHHmm(input.startTime, input.endTime);
-    } catch {
-      setMessage("시간 형식이 올바르지 않습니다.");
+      validateTableTimeRange(range.endIso);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "시간 형식이 올바르지 않거나 이미 종료된 시간입니다.";
+      setMessage(errorMessage);
       return;
     }
 
@@ -220,6 +224,19 @@ function App() {
   const handleJoinTable = async (tableId: string) => {
     const table = effectiveTables.find((item) => item.id === tableId);
     if (!table) return;
+
+    if (isTableExpired(table) && ["RECRUITING", "READY"].includes(table.status)) {
+      setActionLoading(true);
+      try {
+        await refreshFromServer();
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setActionLoading(false);
+      }
+      setMessage("시간이 지난 탁에는 참가할 수 없습니다.");
+      return;
+    }
 
     const joinState = canJoinTable(table);
     if (joinState.disabled) {
@@ -340,6 +357,8 @@ function App() {
     !isSelectedTableJoinedByMe ||
     selectedTable.hostUserId === currentUser.userId ||
     ["CLOSED", "CANCELLED", "EXPIRED"].includes(selectedTable.status);
+  const selectedExpiredNotice =
+    !!selectedTable && (selectedTable.status === "EXPIRED" || isTableExpired(selectedTable));
 
   if (loading) {
     return (
@@ -411,6 +430,7 @@ function App() {
           currentUserId={currentUser.userId}
           joinDisabled={selectedJoinState.disabled}
           leaveDisabled={selectedLeaveDisabled}
+          expiredNotice={selectedExpiredNotice}
           onCopyShare={() => handleCopyShareText(selectedTable.id)}
           onJoin={() => handleJoinTable(selectedTable.id)}
           onLeave={() => handleLeaveTable(selectedTable.id)}

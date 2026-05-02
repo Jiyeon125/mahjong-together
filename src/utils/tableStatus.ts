@@ -1,13 +1,17 @@
 import type { MahjongTable, Participant, TableStatus } from "../types";
 
+export function isTableExpired(table: MahjongTable): boolean {
+  return new Date(table.endTime).getTime() < Date.now();
+}
+
 export function getEffectiveStatus(
   table: MahjongTable,
   participants: Participant[],
 ): TableStatus {
-  if (table.status === "CLOSED") return "CLOSED";
   if (table.status === "CANCELLED") return "CANCELLED";
+  if (table.status === "CLOSED") return "CLOSED";
 
-  if (new Date() > new Date(table.endTime)) {
+  if (isTableExpired(table)) {
     return "EXPIRED";
   }
 

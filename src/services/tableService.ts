@@ -1,6 +1,6 @@
 import { supabase } from "../lib/supabase";
 import type { CurrentUser, MahjongTable, Participant } from "../types";
-import { getEffectiveStatus } from "../utils/tableStatus";
+import { getEffectiveStatus, isTableExpired } from "../utils/tableStatus";
 import { createUUID } from "../utils/storage";
 
 type TableRow = {
@@ -119,6 +119,7 @@ export async function fetchParticipants(): Promise<Participant[]> {
 }
 
 export async function createTable(input: CreateTablePayload): Promise<void> {
+  validateTableTimeRange(input.endTime);
   const tableInsert = mapTableModelToInsert(input);
   const { error: tableError } = await supabase.from("mahjong_tables").insert(tableInsert);
   if (tableError) throw tableError;
@@ -181,6 +182,22 @@ async function updateStatusFromParticipants(
   if (error) throw error;
 }
 
+async function markExpiredIfNeeded(table: MahjongTable): Promise<boolean> {
+  if (!isTableExpired(table)) return false;
+  if (!["RECRUITING", "READY"].includes(table.status)) return false;
+
+  const { error } = await supabase
+    .from("mahjong_tables")
+    .update({
+      status: "EXPIRED",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", table.id)
+    .in("status", ["RECRUITING", "READY"]);
+  if (error) throw error;
+  return true;
+}
+
 export async function joinTable(tableId: string, currentUser: CurrentUser): Promise<void> {
   const { table, tableParticipants } = await getTableAndParticipants(tableId);
 
@@ -193,7 +210,7 @@ export async function joinTable(tableId: string, currentUser: CurrentUser): Prom
   if (["CLOSED", "CANCELLED", "EXPIRED"].includes(table.status)) {
     throw new Error("마감된 탁에는 참가할 수 없습니다.");
   }
-  if (new Date() > new Date(table.endTime)) {
+  if (await markExpiredIfNeeded(table)) {
     throw new Error("시간이 지난 탁에는 참가할 수 없습니다.");
   }
 
@@ -280,4 +297,12 @@ export async function expireOldTables(): Promise<void> {
     .lt("end_time", nowIso)
     .in("status", ["RECRUITING", "READY"]);
   if (error) throw error;
+}
+
+export function validateTableTimeRange(endTime: string): void {
+  // 자정 넘김(예: 23:00~01:00)은 build 로직에서 다음날 종료로 보정되므로 허용.
+  // 보정 이후에도 end가 현재보다 과거라면 이미 끝난 탁이므로 생성을 막는다.
+  if (new Date(endTime).getTime() < Date.now()) {
+    throw new Error("이미 종료된 시간으로는 탁을 생성할 수 없습니다.");
+  }
 }

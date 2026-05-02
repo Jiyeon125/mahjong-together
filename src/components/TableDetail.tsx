@@ -1,5 +1,5 @@
 import type { MahjongTable, Participant } from "../types";
-import { formatHHmm } from "../utils/date";
+import { formatTimeRange } from "../utils/date";
 import {
   getDisplayStatusLabel,
   getGameTypeLabel,
@@ -13,6 +13,7 @@ type TableDetailProps = {
   currentUserId: string;
   joinDisabled: boolean;
   leaveDisabled: boolean;
+  expiredNotice: boolean;
   onCopyShare: () => void;
   onJoin: () => void;
   onLeave: () => void;
@@ -27,6 +28,7 @@ export function TableDetail({
   currentUserId,
   joinDisabled,
   leaveDisabled,
+  expiredNotice,
   onCopyShare,
   onJoin,
   onLeave,
@@ -54,9 +56,7 @@ export function TableDetail({
           인원 수: {participants.length}/{table.maxPlayers}
         </p>
         <p>인원 유형: {getMemberTypeLabel(table.memberType)}</p>
-        <p>
-          시간: {formatHHmm(table.startTime)} ~ {formatHHmm(table.endTime)}
-        </p>
+        <p>시간: {formatTimeRange(table.startTime, table.endTime)}</p>
         <p>게임 방식: {getGameTypeLabel(table.gameType)}</p>
         <p>생성자: {table.hostNickname}</p>
         <p>설명: {table.description?.trim() || "설명 없음"}</p>
@@ -67,6 +67,7 @@ export function TableDetail({
           <p key={seat}>{seat}</p>
         ))}
       </div>
+      {expiredNotice && <p className="warning">만료된 탁입니다.</p>}
 
       <div className="actions">
         <button type="button" className="btn-ghost" onClick={onCopyShare}>

@@ -7,34 +7,35 @@ export function formatHHmm(iso: string): string {
   return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export function getNowIso(): string {
-  return new Date().toISOString();
+export function formatTimeRange(startIso: string, endIso: string): string {
+  return `${formatHHmm(startIso)} ~ ${formatHHmm(endIso)}`;
+}
+
+export function createDateTimeFromTimeInput(time: string, baseDate = new Date()): Date {
+  const [hoursRaw, minutesRaw] = time.split(":");
+  const hours = Number(hoursRaw);
+  const minutes = Number(minutesRaw);
+  if (
+    Number.isNaN(hours) ||
+    Number.isNaN(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    throw new Error("시간 형식이 올바르지 않습니다.");
+  }
+  const date = new Date(baseDate);
+  date.setHours(hours, minutes, 0, 0);
+  return date;
 }
 
 export function buildIsoRangeFromHHmm(
   startHHmm: string,
   endHHmm: string,
 ): { startIso: string; endIso: string } {
-  const startParts = startHHmm.split(":").map(Number);
-  const endParts = endHHmm.split(":").map(Number);
-
-  if (
-    startParts.length !== 2 ||
-    endParts.length !== 2 ||
-    Number.isNaN(startParts[0]) ||
-    Number.isNaN(startParts[1]) ||
-    Number.isNaN(endParts[0]) ||
-    Number.isNaN(endParts[1])
-  ) {
-    throw new Error("시간 형식이 올바르지 않습니다.");
-  }
-
-  const base = new Date();
-  const start = new Date(base);
-  start.setHours(startParts[0], startParts[1], 0, 0);
-
-  const end = new Date(base);
-  end.setHours(endParts[0], endParts[1], 0, 0);
+  const start = createDateTimeFromTimeInput(startHHmm);
+  const end = createDateTimeFromTimeInput(endHHmm);
 
   // 23:00 ~ 01:00 같은 케이스를 다음날 종료로 처리
   if (end <= start) {

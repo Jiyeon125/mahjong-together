@@ -1,5 +1,5 @@
 import type { MahjongTable, Participant } from "../types";
-import { formatHHmm } from "../utils/date";
+import { formatTimeRange } from "../utils/date";
 import {
   getDisplayStatusLabel,
   getGameTypeLabel,
@@ -51,9 +51,7 @@ export function TableCard({
           인원: {participants.length}/{table.maxPlayers}
         </p>
         <p>인원 유형: {getMemberTypeLabel(table.memberType)}</p>
-        <p>
-          시간: {formatHHmm(table.startTime)} ~ {formatHHmm(table.endTime)}
-        </p>
+        <p>시간: {formatTimeRange(table.startTime, table.endTime)}</p>
         <p>게임 방식: {getGameTypeLabel(table.gameType)}</p>
       </div>
 
