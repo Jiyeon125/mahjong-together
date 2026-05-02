@@ -43,7 +43,9 @@ export function TableList({
   return (
     <section className="list-wrap">
       {tables.map((table) => {
-        const tableParticipants = participants.filter((participant) => participant.tableId === table.id);
+        const tableParticipants = participants.filter(
+          (participant) => participant.tableId === table.id,
+        );
         const joinButtonState = getJoinButtonState(table);
         return (
           <TableCard

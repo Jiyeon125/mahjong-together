@@ -4,10 +4,7 @@ export function isTableExpired(table: MahjongTable): boolean {
   return new Date(table.endTime).getTime() < Date.now();
 }
 
-export function getEffectiveStatus(
-  table: MahjongTable,
-  participants: Participant[],
-): TableStatus {
+export function getEffectiveStatus(table: MahjongTable, participants: Participant[]): TableStatus {
   if (table.status === "CANCELLED") return "CANCELLED";
   if (table.status === "CLOSED") return "CLOSED";
 

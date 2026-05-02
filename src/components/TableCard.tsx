@@ -65,7 +65,8 @@ export function TableCard({
         <p>시간: {formatTimeRange(table.startTime, table.endTime)}</p>
         <p>게임 방식: {getGameTypeLabel(table.gameType)}</p>
         <p className="people-count">
-          {participants.length}/{table.maxPlayers}명 <span className="count-hint">· {capacityHint}</span>
+          {participants.length}/{table.maxPlayers}명{" "}
+          <span className="count-hint">· {capacityHint}</span>
         </p>
         <div className="progress-wrap" aria-label="참가 인원 진행도">
           <span className="progress-value" style={{ width: `${progressPercent}%` }} />

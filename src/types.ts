@@ -2,12 +2,7 @@ export type MemberType = "THREE" | "FOUR" | "ANY";
 
 export type GameType = "EAST" | "SOUTH" | "ANY";
 
-export type TableStatus =
-  | "RECRUITING"
-  | "READY"
-  | "CLOSED"
-  | "CANCELLED"
-  | "EXPIRED";
+export type TableStatus = "RECRUITING" | "READY" | "CLOSED" | "CANCELLED" | "EXPIRED";
 
 export type MahjongTable = {
   id: string;
@@ -39,10 +34,4 @@ export type CurrentUser = {
   nickname: string;
 };
 
-export type FilterType =
-  | "ALL"
-  | "THREE"
-  | "FOUR"
-  | "ANY"
-  | "RECRUITING"
-  | "READY";
+export type FilterType = "ALL" | "THREE" | "FOUR" | "ANY" | "RECRUITING" | "READY";

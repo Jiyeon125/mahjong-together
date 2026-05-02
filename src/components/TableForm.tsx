@@ -78,90 +78,90 @@ export function TableForm({
       </button>
       {isOpen && (
         <>
-      {formError && <p className="warning">{formError}</p>}
+          {formError && <p className="warning">{formError}</p>}
 
-      <div className="field">
-        <label htmlFor="table-title">제목 *</label>
-        <input
-          id="table-title"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="예: 오늘 23시 4마 하실 분 구합니다"
-          maxLength={40}
-        />
-      </div>
+          <div className="field">
+            <label htmlFor="table-title">제목 *</label>
+            <input
+              id="table-title"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="예: 오늘 23시 4마 하실 분 구합니다"
+              maxLength={40}
+            />
+          </div>
 
-      <div className="row">
-        <div className="field">
-          <label htmlFor="member-type">인원 유형 *</label>
-          <select
-            id="member-type"
-            value={memberType}
-            onChange={(event) => setMemberType(event.target.value as MemberType)}
+          <div className="row">
+            <div className="field">
+              <label htmlFor="member-type">인원 유형 *</label>
+              <select
+                id="member-type"
+                value={memberType}
+                onChange={(event) => setMemberType(event.target.value as MemberType)}
+              >
+                <option value="THREE">3인</option>
+                <option value="FOUR">4인</option>
+                <option value="ANY">상관없음</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="row">
+            <div className="field">
+              <label htmlFor="start-time">시작 시간 *</label>
+              <input
+                id="start-time"
+                type="time"
+                value={startTime}
+                onChange={(event) => setStartTime(event.target.value)}
+                step={300}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="end-time">종료 시간 *</label>
+              <input
+                id="end-time"
+                type="time"
+                value={endTime}
+                onChange={(event) => setEndTime(event.target.value)}
+                step={300}
+              />
+            </div>
+          </div>
+
+          <div className="field">
+            <label htmlFor="game-type">게임 방식 *</label>
+            <select
+              id="game-type"
+              value={gameType}
+              onChange={(event) => setGameType(event.target.value as GameType)}
+            >
+              <option value="EAST">동풍전</option>
+              <option value="SOUTH">반장전</option>
+              <option value="ANY">상관없음</option>
+            </select>
+          </div>
+
+          <div className="field">
+            <label htmlFor="description">설명</label>
+            <textarea
+              id="description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              rows={3}
+              maxLength={200}
+              placeholder="예: 초보 환영합니다, 편하게 한 판 하시죠!"
+            />
+          </div>
+
+          <button
+            type="button"
+            className="btn-primary form-submit-full"
+            onClick={submit}
+            disabled={disabled || isActionLoading}
           >
-            <option value="THREE">3인</option>
-            <option value="FOUR">4인</option>
-            <option value="ANY">상관없음</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="row">
-        <div className="field">
-          <label htmlFor="start-time">시작 시간 *</label>
-          <input
-            id="start-time"
-            type="time"
-            value={startTime}
-            onChange={(event) => setStartTime(event.target.value)}
-            step={300}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="end-time">종료 시간 *</label>
-          <input
-            id="end-time"
-            type="time"
-            value={endTime}
-            onChange={(event) => setEndTime(event.target.value)}
-            step={300}
-          />
-        </div>
-      </div>
-
-      <div className="field">
-        <label htmlFor="game-type">게임 방식 *</label>
-        <select
-          id="game-type"
-          value={gameType}
-          onChange={(event) => setGameType(event.target.value as GameType)}
-        >
-          <option value="EAST">동풍전</option>
-          <option value="SOUTH">반장전</option>
-          <option value="ANY">상관없음</option>
-        </select>
-      </div>
-
-      <div className="field">
-        <label htmlFor="description">설명</label>
-        <textarea
-          id="description"
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          rows={3}
-          maxLength={200}
-          placeholder="예: 초보 환영합니다, 편하게 한 판 하시죠!"
-        />
-      </div>
-
-      <button
-        type="button"
-        className="btn-primary form-submit-full"
-        onClick={submit}
-        disabled={disabled || isActionLoading}
-      >
-        {isActionLoading ? "생성 중..." : "+ 친선탁 만들기"}
-      </button>
+            {isActionLoading ? "생성 중..." : "+ 친선탁 만들기"}
+          </button>
         </>
       )}
     </section>

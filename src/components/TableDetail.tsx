@@ -51,7 +51,9 @@ export function TableDetail({
     joinButtonState.disabled &&
     ["정원 마감", "모집 마감됨", "만료됨", "취소됨", "참가 불가"].includes(joinButtonState.label);
   const joinButtonClassName = isBlockedJoinState ? "btn-muted" : "btn-primary";
-  const seats = Array.from({ length: table.maxPlayers }).map((_, index) => participants[index] ?? null);
+  const seats = Array.from({ length: table.maxPlayers }).map(
+    (_, index) => participants[index] ?? null,
+  );
 
   return (
     <section className="card detail-card">
@@ -84,46 +86,46 @@ export function TableDetail({
 
       <div className="detail-actions">
         <div className="detail-actions-row">
-        {!isHost ? (
-          <>
-            <button
-              type="button"
-              className={joinButtonClassName}
-              onClick={onJoin}
-              disabled={joinButtonState.disabled || isJoinLoading}
-              title={joinButtonState.reason}
-            >
-              {joinButtonLabel}
-            </button>
-            <button
-              type="button"
-              className="btn-warn-ghost"
-              onClick={onLeave}
-              disabled={leaveDisabled || isLeaveLoading}
-            >
-              {isLeaveLoading ? "처리 중..." : "탁 나가기"}
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
+          {!isHost ? (
+            <>
+              <button
+                type="button"
+                className={joinButtonClassName}
+                onClick={onJoin}
+                disabled={joinButtonState.disabled || isJoinLoading}
+                title={joinButtonState.reason}
+              >
+                {joinButtonLabel}
+              </button>
+              <button
+                type="button"
+                className="btn-warn-ghost"
+                onClick={onLeave}
+                disabled={leaveDisabled || isLeaveLoading}
+              >
+                {isLeaveLoading ? "처리 중..." : "탁 나가기"}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
                 className="btn-secondary"
-              onClick={onClose}
-              disabled={table.status === "CLOSED" || isManageLoading}
-            >
-              {isManageLoading ? "처리 중..." : "모집 마감"}
-            </button>
-            <button
-              type="button"
+                onClick={onClose}
+                disabled={table.status === "CLOSED" || isManageLoading}
+              >
+                {isManageLoading ? "처리 중..." : "모집 마감"}
+              </button>
+              <button
+                type="button"
                 className="btn-danger"
-              onClick={onCancel}
-              disabled={table.status === "CANCELLED" || isManageLoading}
-            >
-              {isManageLoading ? "처리 중..." : "탁 취소"}
-            </button>
-          </>
-        )}
+                onClick={onCancel}
+                disabled={table.status === "CANCELLED" || isManageLoading}
+              >
+                {isManageLoading ? "처리 중..." : "탁 취소"}
+              </button>
+            </>
+          )}
         </div>
         <button
           type="button"

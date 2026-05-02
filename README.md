@@ -30,7 +30,6 @@
   - `mahjong_tables`
   - `table_participants`
 
-
 ## 프로젝트 구조
 
 ```text
@@ -166,7 +165,6 @@ Vercel SPA 라우팅을 위해 `vercel.json` rewrite 설정을 사용합니다.
 - `og:image`: `/og-image.png`
 - `twitter:card`: `summary_large_image`
 
-
 ## 보안/운영 주의
 
 - `ANON`/`PUBLISHABLE` 키는 프론트 노출 가능하지만 RLS 정책이 필수입니다.
@@ -190,15 +188,15 @@ Supabase SQL Editor에서 아래 순서로 실행하는 것을 권장합니다.
 3. 권한/기능 점검
    - 권한 확인(`role_table_grants`)에서 `TRUNCATE/TRIGGER/REFERENCES`가 `anon/authenticated`에 없는지 확인
    - 아래 핵심 시나리오 회귀 테스트
-     1) 탁 목록 조회
-     2) 탁 생성
-     3) 생성자 자동 참가 등록
-     4) 참가하기
-     5) 나가기
-     6) 닉네임 변경 반영
-     7) 모집 마감
-     8) 탁 취소
-     9) 공유 문구 복사
+     1. 탁 목록 조회
+     2. 탁 생성
+     3. 생성자 자동 참가 등록
+     4. 참가하기
+     5. 나가기
+     6. 닉네임 변경 반영
+     7. 모집 마감
+     8. 탁 취소
+     9. 공유 문구 복사
 
 ## MVP 범위 (현재)
 

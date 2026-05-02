@@ -325,7 +325,9 @@ function App() {
       validateTableTimeRange(range.endIso);
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "시간 형식이 올바르지 않거나 이미 종료된 시간입니다.";
+        error instanceof Error
+          ? error.message
+          : "시간 형식이 올바르지 않거나 이미 종료된 시간입니다.";
       setMessage(errorMessage);
       setMessageTone("error");
       return;
@@ -582,9 +584,7 @@ function App() {
         <header className="header">
           <h1>마작투게더</h1>
           <p>마작일번가 오픈채팅 친선탁 모집을 위한 웹앱</p>
-          <p className="header-desc">
-            친선탁을 만들고 참가자를 모집해 보세요!
-          </p>
+          <p className="header-desc">친선탁을 만들고 참가자를 모집해 보세요!</p>
         </header>
         {message && <div className={`toast toast-floating ${messageTone}`}>{message}</div>}
         <NicknameBox
@@ -602,9 +602,7 @@ function App() {
       <header className="header">
         <h1>마작투게더</h1>
         <p>마작일번가 오픈채팅 친선탁 모집을 위한 웹앱</p>
-        <p className="header-desc">
-          친선탁을 만들고 참가자를 모집해 보세요!
-        </p>
+        <p className="header-desc">친선탁을 만들고 참가자를 모집해 보세요!</p>
       </header>
 
       {message && <div className={`toast toast-floating ${messageTone}`}>{message}</div>}
@@ -774,7 +772,9 @@ function App() {
                 onCopyShare={handleCopyShareText}
                 onCreateTable={() => {
                   setIsCreateFormOpen(true);
-                  document.getElementById("create-table-form")?.scrollIntoView({ behavior: "smooth" });
+                  document
+                    .getElementById("create-table-form")
+                    ?.scrollIntoView({ behavior: "smooth" });
                 }}
                 hideEmpty
               />
@@ -782,20 +782,22 @@ function App() {
           )}
           <section className="section-group">
             <h2 className="section-title">현재 모집 중인 탁</h2>
-          <TableList
-            tables={otherVisibleTables}
-            participants={normalizedParticipants}
-            getJoinButtonState={getJoinStateForTable}
-            joiningTableId={joiningTableId}
-            copyingTableId={copyingTableId}
-            onJoin={(tableId) => void handleJoinTable(tableId)}
-            onDetail={navigateToTableDetail}
-            onCopyShare={handleCopyShareText}
-            onCreateTable={() => {
-              setIsCreateFormOpen(true);
-              document.getElementById("create-table-form")?.scrollIntoView({ behavior: "smooth" });
-            }}
-          />
+            <TableList
+              tables={otherVisibleTables}
+              participants={normalizedParticipants}
+              getJoinButtonState={getJoinStateForTable}
+              joiningTableId={joiningTableId}
+              copyingTableId={copyingTableId}
+              onJoin={(tableId) => void handleJoinTable(tableId)}
+              onDetail={navigateToTableDetail}
+              onCopyShare={handleCopyShareText}
+              onCreateTable={() => {
+                setIsCreateFormOpen(true);
+                document
+                  .getElementById("create-table-form")
+                  ?.scrollIntoView({ behavior: "smooth" });
+              }}
+            />
           </section>
         </>
       )}
