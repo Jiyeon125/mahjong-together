@@ -13,10 +13,18 @@ export type CreateTableInput = {
 type TableFormProps = {
   disabled: boolean;
   isActionLoading: boolean;
+  isOpen: boolean;
+  onToggleOpen: () => void;
   onCreate: (input: CreateTableInput) => void;
 };
 
-export function TableForm({ disabled, isActionLoading, onCreate }: TableFormProps) {
+export function TableForm({
+  disabled,
+  isActionLoading,
+  isOpen,
+  onToggleOpen,
+  onCreate,
+}: TableFormProps) {
   const [title, setTitle] = useState("");
   const [memberType, setMemberType] = useState<MemberType>("FOUR");
   const [startTime, setStartTime] = useState("");
@@ -46,8 +54,15 @@ export function TableForm({ disabled, isActionLoading, onCreate }: TableFormProp
   };
 
   return (
-    <section className="card" id="create-table-form">
-      <h2>친선탁 생성하기</h2>
+    <section
+      className={`card table-form-card ${isOpen ? "expanded" : "collapsed"}`}
+      id="create-table-form"
+    >
+      <button type="button" className="form-toggle" onClick={onToggleOpen} aria-expanded={isOpen}>
+        <h3>친선탁 생성하기</h3>
+      </button>
+      {isOpen && (
+        <>
       {formError && <p className="warning">{formError}</p>}
 
       <div className="field">
@@ -122,9 +137,16 @@ export function TableForm({ disabled, isActionLoading, onCreate }: TableFormProp
         />
       </div>
 
-      <button type="button" className="btn-primary" onClick={submit} disabled={disabled || isActionLoading}>
-        {isActionLoading ? "생성 중..." : "생성하기"}
+      <button
+        type="button"
+        className="btn-primary form-submit-full"
+        onClick={submit}
+        disabled={disabled || isActionLoading}
+      >
+        {isActionLoading ? "생성 중..." : "+ 친선탁 만들기"}
       </button>
+        </>
+      )}
     </section>
   );
 }

@@ -81,15 +81,13 @@ export function TableDetail({
       </div>
       {expiredNotice && <p className="warning">만료된 탁입니다.</p>}
 
-      <div className="actions">
-        <button type="button" className="btn-ghost" onClick={onCopyShare}>
-          공유 문구 복사
-        </button>
+      <div className="detail-actions">
+        <div className="detail-actions-row">
         {!isHost ? (
           <>
             <button
               type="button"
-              className="btn-primary"
+                className="btn-primary"
               onClick={onJoin}
               disabled={joinDisabled || isActionLoading}
             >
@@ -97,18 +95,18 @@ export function TableDetail({
             </button>
             <button
               type="button"
-              className="btn-secondary"
+                className="btn-secondary"
               onClick={onLeave}
               disabled={leaveDisabled || isActionLoading}
             >
-              나가기
+              탁 나가기
             </button>
           </>
         ) : (
           <>
             <button
               type="button"
-              className="btn-secondary"
+                className="btn-secondary"
               onClick={onClose}
               disabled={table.status === "CLOSED" || isActionLoading}
             >
@@ -116,7 +114,7 @@ export function TableDetail({
             </button>
             <button
               type="button"
-              className="btn-danger"
+                className="btn-danger"
               onClick={onCancel}
               disabled={table.status === "CANCELLED" || isActionLoading}
             >
@@ -124,7 +122,11 @@ export function TableDetail({
             </button>
           </>
         )}
-        <button type="button" className="btn-ghost" onClick={onBack}>
+        </div>
+        <button type="button" className="btn-ghost detail-single-btn" onClick={onCopyShare}>
+          공유 문구 복사
+        </button>
+        <button type="button" className="btn-ghost detail-single-btn" onClick={onBack}>
           목록으로
         </button>
       </div>

@@ -10,6 +10,7 @@ type TableListProps = {
   onDetail: (tableId: string) => void;
   onCopyShare: (tableId: string) => void;
   onCreateTable: () => void;
+  hideEmpty?: boolean;
 };
 
 export function TableList({
@@ -21,8 +22,10 @@ export function TableList({
   onDetail,
   onCopyShare,
   onCreateTable,
+  hideEmpty = false,
 }: TableListProps) {
   if (tables.length === 0) {
+    if (hideEmpty) return null;
     return (
       <section className="card empty-state">
         <h3>아직 모집 중인 탁이 없습니다.</h3>

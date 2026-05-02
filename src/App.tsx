@@ -46,7 +46,7 @@ function getReadableErrorMessage(error: unknown, fallback: string): string {
       "이미 모집 인원이 가득 찼습니다.",
       "마감된 탁에는 참가할 수 없습니다.",
       "시간이 지난 탁에는 참가할 수 없습니다.",
-      "생성자는 나가기 대신 탁 취소를 사용할 수 있습니다.",
+      "생성자는 탁 나가기 대신 탁 취소를 사용할 수 있습니다.",
       "참가 중인 탁이 아닙니다.",
       "이미 종료된 시간으로는 탁을 생성할 수 없습니다.",
     ]);
@@ -73,6 +73,11 @@ function App() {
   const [shareFallbackText, setShareFallbackText] = useState("");
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
+  const [pendingJoinTableId, setPendingJoinTableId] = useState<string | null>(null);
+  const [joinNicknameInput, setJoinNicknameInput] = useState("");
+  const [showJoinNicknamePrompt, setShowJoinNicknamePrompt] = useState(false);
+  const [recentCreatedTableId, setRecentCreatedTableId] = useState<string | null>(null);
 
   const refreshFromServer = async () => {
     await expireOldTables();
@@ -147,9 +152,6 @@ function App() {
   }, [effectiveTables, filter]);
 
   const canJoinTable = (table: MahjongTable): { disabled: boolean; reason?: string } => {
-    if (!isNicknameValid(currentUser.nickname)) {
-      return { disabled: true, reason: "닉네임을 먼저 설정해주세요." };
-    }
     const tableParticipants = participants.filter((participant) => participant.tableId === table.id);
     if (tableParticipants.some((participant) => participant.userId === currentUser.userId)) {
       return { disabled: true, reason: "이미 참가한 탁입니다." };
@@ -211,7 +213,7 @@ function App() {
     const playerRange = getMemberRange(input.memberType);
     setActionLoading(true);
     try {
-      await createTable({
+      const createdTableId = await createTable({
         title,
         hostUserId: currentUser.userId,
         hostNickname: currentUser.nickname.trim(),
@@ -224,7 +226,25 @@ function App() {
         description: input.description.trim(),
       });
       await refreshFromServer();
+      setRecentCreatedTableId(createdTableId);
+      setIsCreateFormOpen(false);
       setMessage("친선탁이 생성되었습니다.");
+      setMessageTone("success");
+    } catch (error) {
+      console.error(error);
+      setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
+      setMessageTone("error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const doJoin = async (tableId: string, nickname: string) => {
+    setActionLoading(true);
+    try {
+      await joinTable(tableId, { ...currentUser, nickname: nickname.trim() });
+      await refreshFromServer();
+      setMessage("탁에 참가했습니다.");
       setMessageTone("success");
     } catch (error) {
       console.error(error);
@@ -238,6 +258,13 @@ function App() {
   const handleJoinTable = async (tableId: string) => {
     const table = effectiveTables.find((item) => item.id === tableId);
     if (!table) return;
+
+    if (!isNicknameValid(currentUser.nickname)) {
+      setPendingJoinTableId(tableId);
+      setJoinNicknameInput(currentUser.nickname);
+      setShowJoinNicknamePrompt(true);
+      return;
+    }
 
     if (isTableExpired(table) && ["RECRUITING", "READY"].includes(table.status)) {
       setActionLoading(true);
@@ -260,19 +287,7 @@ function App() {
       return;
     }
 
-    setActionLoading(true);
-    try {
-      await joinTable(tableId, currentUser);
-      await refreshFromServer();
-      setMessage("탁에 참가했습니다.");
-      setMessageTone("success");
-    } catch (error) {
-      console.error(error);
-      setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
-      setMessageTone("error");
-    } finally {
-      setActionLoading(false);
-    }
+    await doJoin(tableId, currentUser.nickname);
   };
 
   const handleLeaveTable = async (tableId: string) => {
@@ -280,7 +295,7 @@ function App() {
     if (!table) return;
 
     if (table.hostUserId === currentUser.userId) {
-      setMessage("생성자는 나가기 대신 탁 취소를 사용할 수 있습니다.");
+      setMessage("생성자는 탁 나가기 대신 탁 취소를 사용할 수 있습니다.");
       setMessageTone("error");
       return;
     }
@@ -326,6 +341,9 @@ function App() {
   };
 
   const handleCancelTable = async (tableId: string) => {
+    if (!window.confirm("정말 이 탁을 취소할까요? 취소된 탁은 목록에서 보이지 않습니다.")) {
+      return;
+    }
     setActionLoading(true);
     try {
       await cancelTable(tableId, currentUser);
@@ -339,6 +357,22 @@ function App() {
       setMessageTone("error");
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleSaveAndJoin = async () => {
+    const trimmed = joinNicknameInput.trim();
+    if (!isNicknameValid(trimmed)) {
+      setMessage("닉네임은 공백 없이 1~20자로 입력해주세요.");
+      setMessageTone("error");
+      return;
+    }
+    setCurrentUser((prev) => ({ ...prev, nickname: trimmed }));
+    setShowJoinNicknamePrompt(false);
+    if (pendingJoinTableId) {
+      const targetId = pendingJoinTableId;
+      setPendingJoinTableId(null);
+      await doJoin(targetId, trimmed);
     }
   };
 
@@ -380,13 +414,24 @@ function App() {
     ["CLOSED", "CANCELLED", "EXPIRED"].includes(selectedTable.status);
   const selectedExpiredNotice =
     !!selectedTable && (selectedTable.status === "EXPIRED" || isTableExpired(selectedTable));
+  const hasNickname = isNicknameValid(currentUser.nickname);
+  const joinedTableIds = new Set(
+    participants
+      .filter((participant) => participant.userId === currentUser.userId)
+      .map((participant) => participant.tableId),
+  );
+  const myJoinedTables = visibleTables.filter((table) => joinedTableIds.has(table.id));
+  const otherVisibleTables =
+    myJoinedTables.length > 0
+      ? visibleTables.filter((table) => !joinedTableIds.has(table.id))
+      : visibleTables;
 
   if (loading) {
     return (
       <div className="app">
         <header className="header">
           <h1>마작투게더</h1>
-          <p>마작일번가 오픈채팅 친선탁 모집판</p>
+          <p>마작일번가 오픈채팅 친선탁 모집을 위한 웹앱</p>
         </header>
         <section className="card">
           <p>데이터를 불러오는 중...</p>
@@ -395,17 +440,64 @@ function App() {
     );
   }
 
+  if (!hasNickname) {
+    return (
+      <div className="app">
+        <header className="header">
+          <h1>마작투게더</h1>
+          <p>마작일번가 오픈채팅 친선탁 모집을 위한 웹앱</p>
+          <p className="header-desc">
+            친선탁을 만들고 참가자를 모집해 보세요!
+          </p>
+        </header>
+        {message && <div className={`toast ${messageTone}`}>{message}</div>}
+        <NicknameBox currentUser={currentUser} onSaveNickname={handleSaveNickname} />
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <header className="header">
         <h1>마작투게더</h1>
-        <p>마작일번가 오픈채팅 친선탁 모집판</p>
+        <p>마작일번가 오픈채팅 친선탁 모집을 위한 웹앱</p>
         <p className="header-desc">
-          친선탁을 만들고 참가자를 모집하세요. 실제 대화와 방 생성은 오픈채팅에서 진행합니다.
+          친선탁을 만들고 참가자를 모집해 보세요!
         </p>
       </header>
 
       {message && <div className={`toast ${messageTone}`}>{message}</div>}
+      {showJoinNicknamePrompt && (
+        <section className="card join-prompt">
+          <h2>참가하려면 닉네임이 필요합니다.</h2>
+          <p className="subtle">오픈채팅 닉네임을 입력해주세요.</p>
+          <div className="field">
+            <label htmlFor="join-nickname">오픈채팅 닉네임</label>
+            <input
+              id="join-nickname"
+              value={joinNicknameInput}
+              onChange={(event) => setJoinNicknameInput(event.target.value)}
+              maxLength={20}
+              placeholder="오픈채팅 닉네임"
+            />
+          </div>
+          <div className="actions">
+            <button type="button" className="btn-primary" onClick={() => void handleSaveAndJoin()}>
+              저장하고 참가하기
+            </button>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => {
+                setShowJoinNicknamePrompt(false);
+                setPendingJoinTableId(null);
+              }}
+            >
+              닫기
+            </button>
+          </div>
+        </section>
+      )}
       {shareFallbackText && (
         <section className="card">
           <h2>직접 복사하기</h2>
@@ -472,11 +564,62 @@ function App() {
           <TableForm
             disabled={!isNicknameValid(currentUser.nickname) || actionLoading}
             isActionLoading={actionLoading}
+            isOpen={isCreateFormOpen}
+            onToggleOpen={() => setIsCreateFormOpen((prev) => !prev)}
             onCreate={(input) => void handleCreateTable(input)}
           />
+          {recentCreatedTableId && (
+            <section className="card created-next-actions">
+              <h3>탁이 생성되었습니다.</h3>
+              <div className="actions created-next-actions-buttons">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => void handleCopyShareText(recentCreatedTableId)}
+                >
+                  공유 문구 복사
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setSelectedTableId(recentCreatedTableId)}
+                >
+                  상세보기
+                </button>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => setRecentCreatedTableId(null)}
+                >
+                  닫기
+                </button>
+              </div>
+            </section>
+          )}
           <FilterTabs value={filter} onChange={setFilter} />
+          {myJoinedTables.length > 0 && (
+            <section className="section-group">
+              <h2 className="section-title">내가 참가한 탁</h2>
+              <TableList
+                tables={myJoinedTables}
+                participants={participants}
+                getJoinState={canJoinTable}
+                isActionLoading={actionLoading}
+                onJoin={(tableId) => void handleJoinTable(tableId)}
+                onDetail={setSelectedTableId}
+                onCopyShare={handleCopyShareText}
+                onCreateTable={() => {
+                  setIsCreateFormOpen(true);
+                  document.getElementById("create-table-form")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                hideEmpty
+              />
+            </section>
+          )}
+          <section className="section-group">
+            <h2 className="section-title">현재 모집 중인 탁</h2>
           <TableList
-            tables={visibleTables}
+            tables={otherVisibleTables}
             participants={participants}
             getJoinState={canJoinTable}
             isActionLoading={actionLoading}
@@ -484,9 +627,11 @@ function App() {
             onDetail={setSelectedTableId}
             onCopyShare={handleCopyShareText}
             onCreateTable={() => {
+              setIsCreateFormOpen(true);
               document.getElementById("create-table-form")?.scrollIntoView({ behavior: "smooth" });
             }}
           />
+          </section>
         </>
       )}
     </div>

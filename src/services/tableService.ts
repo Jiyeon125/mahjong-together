@@ -124,7 +124,7 @@ export async function fetchParticipants(): Promise<Participant[]> {
   return (data as ParticipantRow[]).map(mapParticipantRowToModel);
 }
 
-export async function createTable(input: CreateTablePayload): Promise<void> {
+export async function createTable(input: CreateTablePayload): Promise<string> {
   ensureSupabaseReady();
   validateTableTimeRange(input.endTime);
   const tableInsert = mapTableModelToInsert(input);
@@ -147,6 +147,7 @@ export async function createTable(input: CreateTablePayload): Promise<void> {
     await supabase.from("mahjong_tables").delete().eq("id", tableInsert.id);
     throw participantError;
   }
+  return tableInsert.id;
 }
 
 async function getTableAndParticipants(tableId: string): Promise<{
@@ -242,7 +243,7 @@ export async function leaveTable(tableId: string, currentUser: CurrentUser): Pro
   const { table, tableParticipants } = await getTableAndParticipants(tableId);
 
   if (table.hostUserId === currentUser.userId) {
-    throw new Error("생성자는 나가기 대신 탁 취소를 사용할 수 있습니다.");
+    throw new Error("생성자는 탁 나가기 대신 탁 취소를 사용할 수 있습니다.");
   }
 
   const mine = tableParticipants.find((participant) => participant.userId === currentUser.userId);
