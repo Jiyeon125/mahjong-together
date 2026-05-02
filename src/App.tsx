@@ -374,6 +374,9 @@ function App() {
       <header className="header">
         <h1>마작투게더</h1>
         <p>마작일번가 오픈채팅 친선탁 모집판</p>
+        <p className="header-desc">
+          친선탁을 만들고 참가자를 모집하세요. 실제 대화와 방 생성은 오픈채팅에서 진행합니다.
+        </p>
       </header>
 
       {message && <div className="toast">{message}</div>}
@@ -442,6 +445,9 @@ function App() {
             onJoin={(tableId) => void handleJoinTable(tableId)}
             onDetail={setSelectedTableId}
             onCopyShare={handleCopyShareText}
+            onCreateTable={() => {
+              document.getElementById("create-table-form")?.scrollIntoView({ behavior: "smooth" });
+            }}
           />
         </>
       )}

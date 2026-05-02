@@ -37,10 +37,7 @@ export function TableDetail({
   onBack,
 }: TableDetailProps) {
   const isHost = table.hostUserId === currentUserId;
-  const seats = Array.from({ length: table.maxPlayers }).map((_, index) => {
-    const participant = participants[index];
-    return participant ? `${index + 1}. ${participant.nickname}` : `${index + 1}. 모집 중`;
-  });
+  const seats = Array.from({ length: table.maxPlayers }).map((_, index) => participants[index] ?? null);
 
   return (
     <section className="card detail-card">
@@ -63,8 +60,10 @@ export function TableDetail({
       </div>
 
       <div className="seat-list">
-        {seats.map((seat) => (
-          <p key={seat}>{seat}</p>
+        {seats.map((seat, index) => (
+          <p key={`seat-${index}`} className={seat ? "" : "seat-empty"}>
+            {index + 1}. {seat ? seat.nickname : "모집 중"}
+          </p>
         ))}
       </div>
       {expiredNotice && <p className="warning">만료된 탁입니다.</p>}

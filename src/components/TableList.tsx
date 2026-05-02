@@ -8,6 +8,7 @@ type TableListProps = {
   onJoin: (tableId: string) => void;
   onDetail: (tableId: string) => void;
   onCopyShare: (tableId: string) => void;
+  onCreateTable: () => void;
 };
 
 export function TableList({
@@ -17,11 +18,16 @@ export function TableList({
   onJoin,
   onDetail,
   onCopyShare,
+  onCreateTable,
 }: TableListProps) {
   if (tables.length === 0) {
     return (
-      <section className="card">
-        <p>조건에 맞는 탁이 없습니다.</p>
+      <section className="card empty-state">
+        <h3>아직 모집 중인 탁이 없습니다.</h3>
+        <p>지금 바로 친선탁을 만들어보세요.</p>
+        <button type="button" className="btn-primary" onClick={onCreateTable}>
+          친선탁 생성하기
+        </button>
       </section>
     );
   }

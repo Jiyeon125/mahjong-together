@@ -35,3 +35,11 @@ export function getStatusBadgeClass(table: MahjongTable, participantCount: numbe
   }
   return table.status.toLowerCase();
 }
+
+export function getCapacityHint(table: MahjongTable, participantCount: number): string {
+  if (table.memberType === "ANY") {
+    if (participantCount >= 4) return "4인 가능";
+    if (participantCount >= 3) return "3인 시작 가능";
+  }
+  return getDisplayStatusLabel(table, participantCount);
+}

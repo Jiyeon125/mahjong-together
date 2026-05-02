@@ -22,15 +22,15 @@ textarea {
 }
 
 .app {
-  max-width: 680px;
+  max-width: 560px;
   margin: 0 auto;
-  padding: 14px;
+  padding: 16px;
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .header {
-  padding: 8px 2px;
+  padding: 4px 2px;
 }
 
 .header h1 {
@@ -45,11 +45,17 @@ textarea {
   font-size: 0.95rem;
 }
 
+.header .header-desc {
+  margin-top: 8px;
+  font-size: 0.88rem;
+  color: #5b6e61;
+}
+
 .card {
   background: #ffffff;
   border: 1px solid #d9e5db;
-  border-radius: 14px;
-  padding: 14px;
+  border-radius: 16px;
+  padding: 14px 14px 15px;
   box-shadow: 0 6px 16px rgba(31, 81, 52, 0.06);
 }
 
@@ -90,6 +96,7 @@ textarea {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  margin-top: 10px;
 }
 
 button {
@@ -106,7 +113,7 @@ button:disabled {
 }
 
 .btn-primary {
-  background: #2f8250;
+  background: linear-gradient(180deg, #2f8a55 0%, #2a7648 100%);
   color: #fff;
 }
 
@@ -137,6 +144,7 @@ button:disabled {
   gap: 6px;
   overflow-x: auto;
   padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .filter-btn {
@@ -167,6 +175,13 @@ button:disabled {
   gap: 8px;
 }
 
+.badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .status-badge {
   display: inline-flex;
   width: fit-content;
@@ -177,13 +192,13 @@ button:disabled {
 }
 
 .status-badge.recruiting {
-  background: #e6f6ec;
-  color: #1f6c40;
+  background: #e6f7ed;
+  color: #1f6d43;
 }
 
 .status-badge.ready {
-  background: #e2f2ff;
-  color: #2a5578;
+  background: #daf0ff;
+  color: #1f527a;
 }
 
 .status-badge.ready-three {
@@ -201,16 +216,29 @@ button:disabled {
   color: #48515a;
 }
 
-.status-badge.cancelled,
+.status-badge.cancelled {
+  background: #f7ebeb;
+  color: #844646;
+}
+
 .status-badge.expired {
-  background: #f6e6e6;
-  color: #7a3838;
+  background: #f0f2f3;
+  color: #6b737b;
+}
+
+.member-badge {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 0.78rem;
+  background: #edf4ef;
+  color: #355744;
 }
 
 .meta {
   display: grid;
-  gap: 5px;
-  font-size: 0.93rem;
+  gap: 6px;
+  font-size: 0.92rem;
   color: #2b4735;
 }
 
@@ -219,10 +247,15 @@ button:disabled {
 }
 
 .participants {
-  margin: 10px 0;
+  margin: 10px 0 0;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.participant-empty {
+  color: #6a7d71;
+  font-size: 0.85rem;
 }
 
 .participant-pill {
@@ -231,6 +264,30 @@ button:disabled {
   border-radius: 999px;
   padding: 4px 10px;
   font-size: 0.82rem;
+}
+
+.people-count {
+  font-weight: 700;
+  color: #234b35;
+}
+
+.count-hint {
+  font-weight: 500;
+  color: #486a58;
+}
+
+.progress-wrap {
+  width: 100%;
+  height: 8px;
+  background: #e7f0ea;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-value {
+  display: block;
+  height: 100%;
+  background: #30905a;
 }
 
 .seat-list {
@@ -247,6 +304,10 @@ button:disabled {
 
 .seat-list p:last-child {
   margin-bottom: 0;
+}
+
+.seat-empty {
+  color: #7b8d82;
 }
 
 .warning {
@@ -290,10 +351,27 @@ button:disabled {
   min-height: 180px;
 }
 
-.footer-tools {
-  display: flex;
-  justify-content: flex-end;
-  padding-bottom: 8px;
+.btn-join {
+  flex: 1 1 100%;
+  font-size: 0.98rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 20px 16px;
+}
+
+.empty-state h3 {
+  margin: 0 0 8px;
+}
+
+.empty-state p {
+  margin: 0 0 14px;
+  color: #567062;
+}
+
+.empty-state button {
+  min-width: 180px;
 }
 
 @media (max-width: 420px) {
@@ -303,6 +381,15 @@ button:disabled {
 
   .actions button {
     flex: 1 1 calc(50% - 6px);
-    min-width: 130px;
+    min-width: 120px;
+  }
+
+  .btn-join {
+    flex-basis: 100%;
+  }
+
+  .nickname-summary {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

@@ -22,8 +22,18 @@ export function TableForm({ disabled, onCreate }: TableFormProps) {
   const [endTime, setEndTime] = useState("");
   const [gameType, setGameType] = useState<GameType>("SOUTH");
   const [description, setDescription] = useState("");
+  const [formError, setFormError] = useState("");
 
   const submit = () => {
+    if (!title.trim()) {
+      setFormError("제목을 입력해주세요.");
+      return;
+    }
+    if (!startTime || !endTime) {
+      setFormError("시작 시간과 종료 시간을 입력해주세요.");
+      return;
+    }
+    setFormError("");
     onCreate({
       title,
       memberType,
@@ -35,11 +45,12 @@ export function TableForm({ disabled, onCreate }: TableFormProps) {
   };
 
   return (
-    <section className="card">
+    <section className="card" id="create-table-form">
       <h2>친선탁 생성하기</h2>
+      {formError && <p className="warning">{formError}</p>}
 
       <div className="field">
-        <label htmlFor="table-title">제목</label>
+        <label htmlFor="table-title">제목 *</label>
         <input
           id="table-title"
           value={title}
@@ -51,7 +62,7 @@ export function TableForm({ disabled, onCreate }: TableFormProps) {
 
       <div className="row">
         <div className="field">
-          <label htmlFor="member-type">인원 유형</label>
+          <label htmlFor="member-type">인원 유형 *</label>
           <select
             id="member-type"
             value={memberType}
@@ -62,23 +73,11 @@ export function TableForm({ disabled, onCreate }: TableFormProps) {
             <option value="ANY">상관없음</option>
           </select>
         </div>
-        <div className="field">
-          <label htmlFor="game-type">게임 방식</label>
-          <select
-            id="game-type"
-            value={gameType}
-            onChange={(event) => setGameType(event.target.value as GameType)}
-          >
-            <option value="EAST">동풍전</option>
-            <option value="SOUTH">반장전</option>
-            <option value="ANY">상관없음</option>
-          </select>
-        </div>
       </div>
 
       <div className="row">
         <div className="field">
-          <label htmlFor="start-time">시작 시간</label>
+          <label htmlFor="start-time">시작 시간 *</label>
           <input
             id="start-time"
             type="time"
@@ -87,7 +86,7 @@ export function TableForm({ disabled, onCreate }: TableFormProps) {
           />
         </div>
         <div className="field">
-          <label htmlFor="end-time">종료 시간</label>
+          <label htmlFor="end-time">종료 시간 *</label>
           <input
             id="end-time"
             type="time"
@@ -98,6 +97,19 @@ export function TableForm({ disabled, onCreate }: TableFormProps) {
       </div>
 
       <div className="field">
+        <label htmlFor="game-type">게임 방식 *</label>
+        <select
+          id="game-type"
+          value={gameType}
+          onChange={(event) => setGameType(event.target.value as GameType)}
+        >
+          <option value="EAST">동풍전</option>
+          <option value="SOUTH">반장전</option>
+          <option value="ANY">상관없음</option>
+        </select>
+      </div>
+
+      <div className="field">
         <label htmlFor="description">설명</label>
         <textarea
           id="description"
@@ -105,7 +117,7 @@ export function TableForm({ disabled, onCreate }: TableFormProps) {
           onChange={(event) => setDescription(event.target.value)}
           rows={3}
           maxLength={200}
-          placeholder="선택 입력"
+          placeholder="예: 초보 가능, 편하게 한 판"
         />
       </div>
 
