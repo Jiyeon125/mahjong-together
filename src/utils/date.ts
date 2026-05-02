@@ -11,6 +11,26 @@ export function formatTimeRange(startIso: string, endIso: string): string {
   return `${formatHHmm(startIso)} ~ ${formatHHmm(endIso)}`;
 }
 
+export function roundUpToNext30Minutes(date: Date): Date {
+  const next = new Date(date);
+  next.setSeconds(0, 0);
+  const minutes = next.getMinutes();
+  const remainder = minutes % 30;
+  const delta = remainder === 0 ? 30 : 30 - remainder;
+  next.setMinutes(minutes + delta);
+  return next;
+}
+
+export function addHours(date: Date, hours: number): Date {
+  const next = new Date(date);
+  next.setHours(next.getHours() + hours);
+  return next;
+}
+
+export function formatTimeInput(date: Date): string {
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function createDateTimeFromTimeInput(time: string, baseDate = new Date()): Date {
   const [hoursRaw, minutesRaw] = time.split(":");
   const hours = Number(hoursRaw);

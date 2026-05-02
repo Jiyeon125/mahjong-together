@@ -1,5 +1,6 @@
 import type { MahjongTable, Participant } from "../types";
 import { formatTimeRange } from "../utils/date";
+import type { JoinButtonState } from "../utils/joinButton";
 import {
   getDisplayStatusLabel,
   getGameTypeLabel,
@@ -11,8 +12,7 @@ type TableDetailProps = {
   table: MahjongTable;
   participants: Participant[];
   currentUserId: string;
-  joinDisabled: boolean;
-  joinDisabledReason?: string;
+  joinButtonState: JoinButtonState;
   leaveDisabled: boolean;
   isActionLoading: boolean;
   expiredNotice: boolean;
@@ -28,8 +28,7 @@ export function TableDetail({
   table,
   participants,
   currentUserId,
-  joinDisabled,
-  joinDisabledReason,
+  joinButtonState,
   leaveDisabled,
   isActionLoading,
   expiredNotice,
@@ -41,15 +40,11 @@ export function TableDetail({
   onBack,
 }: TableDetailProps) {
   const isHost = table.hostUserId === currentUserId;
-  const getJoinText = (): string => {
-    if (isActionLoading) return "처리 중...";
-    if (!joinDisabled) return "참가하기";
-    if (joinDisabledReason === "이미 참가한 탁입니다.") return "이미 참가 중";
-    if (joinDisabledReason === "이미 모집 인원이 가득 찼습니다.") return "정원 마감";
-    if (joinDisabledReason === "시간이 지난 탁에는 참가할 수 없습니다.") return "만료됨";
-    if (joinDisabledReason === "마감된 탁에는 참가할 수 없습니다.") return "모집 마감";
-    return "참가 불가";
-  };
+  const joinButtonLabel = isActionLoading ? "처리 중..." : joinButtonState.label;
+  const isBlockedJoinState =
+    joinButtonState.disabled &&
+    ["정원 마감", "모집 마감됨", "만료됨", "취소됨", "참가 불가"].includes(joinButtonState.label);
+  const joinButtonClassName = isBlockedJoinState ? "btn-muted" : "btn-primary";
   const seats = Array.from({ length: table.maxPlayers }).map((_, index) => participants[index] ?? null);
 
   return (
@@ -87,15 +82,16 @@ export function TableDetail({
           <>
             <button
               type="button"
-                className="btn-primary"
+              className={joinButtonClassName}
               onClick={onJoin}
-              disabled={joinDisabled || isActionLoading}
+              disabled={joinButtonState.disabled || isActionLoading}
+              title={joinButtonState.reason}
             >
-              {getJoinText()}
+              {joinButtonLabel}
             </button>
             <button
               type="button"
-                className="btn-secondary"
+              className="btn-warn-ghost"
               onClick={onLeave}
               disabled={leaveDisabled || isActionLoading}
             >

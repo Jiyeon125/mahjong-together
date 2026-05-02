@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { GameType, MemberType } from "../types";
+import { addHours, formatTimeInput, roundUpToNext30Minutes } from "../utils/date";
 
 export type CreateTableInput = {
   title: string;
@@ -27,11 +28,25 @@ export function TableForm({
 }: TableFormProps) {
   const [title, setTitle] = useState("");
   const [memberType, setMemberType] = useState<MemberType>("FOUR");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [startTime, setStartTime] = useState("00:00");
+  const [endTime, setEndTime] = useState("02:00");
   const [gameType, setGameType] = useState<GameType>("SOUTH");
   const [description, setDescription] = useState("");
   const [formError, setFormError] = useState("");
+  const prevIsOpen = useRef(isOpen);
+
+  useEffect(() => {
+    // 접힘 -> 펼침 전환 시점에만 기본 시간을 현재 기준으로 계산한다.
+    if (isOpen && !prevIsOpen.current) {
+      const start = roundUpToNext30Minutes(new Date());
+      const end = addHours(start, 2);
+      setStartTime(formatTimeInput(start));
+      setEndTime(formatTimeInput(end));
+      setMemberType("FOUR");
+      setGameType("SOUTH");
+    }
+    prevIsOpen.current = isOpen;
+  }, [isOpen]);
 
   const submit = () => {
     if (!title.trim()) {

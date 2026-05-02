@@ -1,5 +1,6 @@
 import type { MahjongTable, Participant } from "../types";
 import { formatTimeRange } from "../utils/date";
+import type { JoinButtonState } from "../utils/joinButton";
 import {
   getCapacityHint,
   getDisplayStatusLabel,
@@ -11,8 +12,7 @@ import {
 type TableCardProps = {
   table: MahjongTable;
   participants: Participant[];
-  joinDisabled: boolean;
-  joinDisabledReason?: string;
+  joinButtonState: JoinButtonState;
   isActionLoading: boolean;
   onJoin: (tableId: string) => void;
   onDetail: (tableId: string) => void;
@@ -22,8 +22,7 @@ type TableCardProps = {
 export function TableCard({
   table,
   participants,
-  joinDisabled,
-  joinDisabledReason,
+  joinButtonState,
   isActionLoading,
   onJoin,
   onDetail,
@@ -31,15 +30,11 @@ export function TableCard({
 }: TableCardProps) {
   const progressPercent = Math.min(100, Math.round((participants.length / table.maxPlayers) * 100));
   const capacityHint = getCapacityHint(table, participants.length);
-  const getJoinButtonText = (): string => {
-    if (isActionLoading) return "처리 중...";
-    if (!joinDisabled) return "참가하기";
-    if (joinDisabledReason === "이미 참가한 탁입니다.") return "이미 참가 중";
-    if (joinDisabledReason === "이미 모집 인원이 가득 찼습니다.") return "정원 마감";
-    if (joinDisabledReason === "시간이 지난 탁에는 참가할 수 없습니다.") return "만료됨";
-    if (joinDisabledReason === "마감된 탁에는 참가할 수 없습니다.") return "모집 마감";
-    return "참가 불가";
-  };
+  const joinButtonText = isActionLoading ? "처리 중..." : joinButtonState.label;
+  const isBlockedJoinState =
+    joinButtonState.disabled &&
+    ["정원 마감", "모집 마감됨", "만료됨", "취소됨", "참가 불가"].includes(joinButtonState.label);
+  const joinButtonClassName = isBlockedJoinState ? "btn-muted btn-join" : "btn-primary btn-join";
 
   return (
     <article
@@ -90,15 +85,15 @@ export function TableCard({
       <div className="actions">
         <button
           type="button"
-          className="btn-primary btn-join"
+          className={joinButtonClassName}
           onClick={(event) => {
             event.stopPropagation();
             onJoin(table.id);
           }}
-          disabled={joinDisabled || isActionLoading}
-          title={joinDisabledReason}
+          disabled={joinButtonState.disabled || isActionLoading}
+          title={joinButtonState.reason}
         >
-          {getJoinButtonText()}
+          {joinButtonText}
         </button>
         <button
           type="button"

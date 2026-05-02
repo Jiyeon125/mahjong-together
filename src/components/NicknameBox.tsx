@@ -3,10 +3,11 @@ import type { CurrentUser } from "../types";
 
 type NicknameBoxProps = {
   currentUser: CurrentUser;
+  showSetupHint: boolean;
   onSaveNickname: (nickname: string) => void;
 };
 
-export function NicknameBox({ currentUser, onSaveNickname }: NicknameBoxProps) {
+export function NicknameBox({ currentUser, showSetupHint, onSaveNickname }: NicknameBoxProps) {
   const [nicknameInput, setNicknameInput] = useState(currentUser.nickname);
   const [isEditing, setIsEditing] = useState(!currentUser.nickname.trim());
 
@@ -38,7 +39,7 @@ export function NicknameBox({ currentUser, onSaveNickname }: NicknameBoxProps) {
   return (
     <section className="card">
       <h2>내 닉네임</h2>
-      {!currentUser.nickname.trim() && (
+      {!currentUser.nickname.trim() && showSetupHint && (
         <p className="warning">탁 생성/참가를 위해 오픈채팅 닉네임을 설정해주세요.</p>
       )}
       <div className="field">

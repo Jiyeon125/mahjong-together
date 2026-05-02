@@ -6,6 +6,7 @@ import { TableForm } from "./components/TableForm";
 import type { CreateTableInput } from "./components/TableForm";
 import { TableList } from "./components/TableList";
 import type { CurrentUser, FilterType, MahjongTable, Participant } from "./types";
+import { getJoinButtonState } from "./utils/joinButton";
 import {
   cancelTable,
   closeTable,
@@ -58,6 +59,13 @@ function getReadableErrorMessage(error: unknown, fallback: string): string {
 }
 
 type MessageTone = "success" | "error" | "info";
+type ConfirmAction = { kind: "close" | "cancel"; tableId: string };
+
+function parseTableIdFromPath(pathname: string): string | null {
+  if (pathname === "/" || pathname === "/tables") return null;
+  const matched = pathname.match(/^\/tables\/([^/]+)$/);
+  return matched ? decodeURIComponent(matched[1]) : null;
+}
 
 function App() {
   const [currentUser, setCurrentUser] = useState<CurrentUser>({
@@ -66,17 +74,21 @@ function App() {
   });
   const [tables, setTables] = useState<MahjongTable[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(() =>
+    parseTableIdFromPath(window.location.pathname),
+  );
   const [filter, setFilter] = useState<FilterType>("ALL");
   const [message, setMessage] = useState("");
   const [messageTone, setMessageTone] = useState<MessageTone>("info");
   const [shareFallbackText, setShareFallbackText] = useState("");
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [pendingJoinTableId, setPendingJoinTableId] = useState<string | null>(null);
   const [joinNicknameInput, setJoinNicknameInput] = useState("");
   const [showJoinNicknamePrompt, setShowJoinNicknamePrompt] = useState(false);
+  const [showNicknameSetupHint, setShowNicknameSetupHint] = useState(false);
   const [recentCreatedTableId, setRecentCreatedTableId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -116,6 +128,24 @@ function App() {
     saveCurrentUser(currentUser);
   }, [currentUser]);
 
+  useEffect(() => {
+    const onPopState = () => {
+      setSelectedTableId(parseTableIdFromPath(window.location.pathname));
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  const navigateToList = () => {
+    window.history.pushState({}, "", "/tables");
+    setSelectedTableId(null);
+  };
+
+  const navigateToTableDetail = (tableId: string) => {
+    window.history.pushState({}, "", `/tables/${encodeURIComponent(tableId)}`);
+    setSelectedTableId(tableId);
+  };
+
   const effectiveTables = useMemo(
     () => applyEffectiveStatuses(tables, participants),
     [tables, participants],
@@ -143,6 +173,7 @@ function App() {
       .filter((participant) => participant.tableId === selectedTableId)
       .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
   }, [participants, selectedTableId]);
+  const hasNickname = isNicknameValid(currentUser.nickname);
 
   const visibleTables = useMemo(() => {
     const filtered = effectiveTables.filter((table) => {
@@ -159,21 +190,9 @@ function App() {
     );
   }, [effectiveTables, filter]);
 
-  const canJoinTable = (table: MahjongTable): { disabled: boolean; reason?: string } => {
+  const getJoinStateForTable = (table: MahjongTable) => {
     const tableParticipants = participants.filter((participant) => participant.tableId === table.id);
-    if (tableParticipants.some((participant) => participant.userId === currentUser.userId)) {
-      return { disabled: true, reason: "이미 참가한 탁입니다." };
-    }
-    if (tableParticipants.length >= table.maxPlayers) {
-      return { disabled: true, reason: "이미 모집 인원이 가득 찼습니다." };
-    }
-    if (["CLOSED", "CANCELLED", "EXPIRED"].includes(table.status)) {
-      return { disabled: true, reason: "마감된 탁에는 참가할 수 없습니다." };
-    }
-    if (isTableExpired(table)) {
-      return { disabled: true, reason: "시간이 지난 탁에는 참가할 수 없습니다." };
-    }
-    return { disabled: false };
+    return getJoinButtonState(table, tableParticipants, currentUser.userId, hasNickname);
   };
 
   const handleSaveNickname = (nickname: string) => {
@@ -184,6 +203,7 @@ function App() {
       return;
     }
     setCurrentUser((prev) => ({ ...prev, nickname: trimmed }));
+    setShowNicknameSetupHint(false);
     setMessage("닉네임이 저장되었습니다.");
     setMessageTone("success");
   };
@@ -268,6 +288,7 @@ function App() {
     if (!table) return;
 
     if (!isNicknameValid(currentUser.nickname)) {
+      setShowNicknameSetupHint(true);
       setPendingJoinTableId(tableId);
       setJoinNicknameInput(currentUser.nickname);
       setShowJoinNicknamePrompt(true);
@@ -288,7 +309,7 @@ function App() {
       return;
     }
 
-    const joinState = canJoinTable(table);
+    const joinState = getJoinStateForTable(table);
     if (joinState.disabled) {
       setMessage(joinState.reason ?? "참가할 수 없습니다.");
       setMessageTone("error");
@@ -332,36 +353,32 @@ function App() {
     }
   };
 
-  const handleCloseRecruiting = async (tableId: string) => {
-    if (!window.confirm("모집을 마감할까요? 마감 후에는 더 이상 참가할 수 없습니다.")) {
-      return;
-    }
-    setActionLoading(true);
-    try {
-      await closeTable(tableId, currentUser);
-      await refreshFromServer();
-      setMessage("모집이 마감되었습니다.");
-      setMessageTone("success");
-    } catch (error) {
-      console.error(error);
-      setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
-      setMessageTone("error");
-    } finally {
-      setActionLoading(false);
-    }
+  const handleCloseRecruiting = (tableId: string) => {
+    setConfirmAction({ kind: "close", tableId });
   };
 
-  const handleCancelTable = async (tableId: string) => {
-    if (!window.confirm("정말 이 탁을 취소할까요? 취소된 탁은 목록에서 보이지 않습니다.")) {
-      return;
-    }
+  const handleCancelTable = (tableId: string) => {
+    setConfirmAction({ kind: "cancel", tableId });
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmAction) return;
+    const action = confirmAction;
+    setConfirmAction(null);
     setActionLoading(true);
     try {
-      await cancelTable(tableId, currentUser);
-      await refreshFromServer();
-      setSelectedTableId(null);
-      setMessage("탁이 취소되었습니다.");
-      setMessageTone("success");
+      if (action.kind === "close") {
+        await closeTable(action.tableId, currentUser);
+        await refreshFromServer();
+        setMessage("모집이 마감되었습니다.");
+        setMessageTone("success");
+      } else {
+        await cancelTable(action.tableId, currentUser);
+        await refreshFromServer();
+        navigateToList();
+        setMessage("탁이 취소되었습니다.");
+        setMessageTone("success");
+      }
     } catch (error) {
       console.error(error);
       setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
@@ -394,8 +411,8 @@ function App() {
     const tableParticipants = participants
       .filter((participant) => participant.tableId === tableId)
       .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
-    const currentUrl = window.location.href;
-    const shareText = buildTableShareText(table, tableParticipants, currentUrl);
+    const detailUrl = `${window.location.origin}/tables/${encodeURIComponent(table.id)}`;
+    const shareText = buildTableShareText(table, tableParticipants, detailUrl);
 
     try {
       if (!navigator.clipboard?.writeText) {
@@ -417,7 +434,9 @@ function App() {
     (participant) => participant.userId === currentUser.userId,
   );
 
-  const selectedJoinState = selectedTable ? canJoinTable(selectedTable) : { disabled: true };
+  const selectedJoinState = selectedTable
+    ? getJoinStateForTable(selectedTable)
+    : { label: "참가 불가", disabled: true };
   const selectedLeaveDisabled =
     !selectedTable ||
     !isSelectedTableJoinedByMe ||
@@ -425,7 +444,6 @@ function App() {
     ["CLOSED", "CANCELLED", "EXPIRED"].includes(selectedTable.status);
   const selectedExpiredNotice =
     !!selectedTable && (selectedTable.status === "EXPIRED" || isTableExpired(selectedTable));
-  const hasNickname = isNicknameValid(currentUser.nickname);
   const joinedTableIds = new Set(
     participants
       .filter((participant) => participant.userId === currentUser.userId)
@@ -452,7 +470,9 @@ function App() {
     );
   }
 
-  if (!hasNickname) {
+  const routeRequestedDetail = selectedTableId !== null;
+
+  if (!hasNickname && !routeRequestedDetail) {
     return (
       <div className="app">
         <header className="header">
@@ -463,7 +483,11 @@ function App() {
           </p>
         </header>
         {message && <div className={`toast toast-floating ${messageTone}`}>{message}</div>}
-        <NicknameBox currentUser={currentUser} onSaveNickname={handleSaveNickname} />
+        <NicknameBox
+          currentUser={currentUser}
+          showSetupHint={showNicknameSetupHint}
+          onSaveNickname={handleSaveNickname}
+        />
       </div>
     );
   }
@@ -549,28 +573,38 @@ function App() {
         </section>
       )}
 
-      <NicknameBox
-        currentUser={currentUser}
-        onSaveNickname={handleSaveNickname}
-      />
+      {!(showJoinNicknamePrompt && !hasNickname) && (
+        <NicknameBox
+          currentUser={currentUser}
+          showSetupHint={showNicknameSetupHint}
+          onSaveNickname={handleSaveNickname}
+        />
+      )}
 
       {selectedTable ? (
         <TableDetail
           table={selectedTable}
           participants={selectedParticipants}
           currentUserId={currentUser.userId}
-          joinDisabled={selectedJoinState.disabled}
-            joinDisabledReason={selectedJoinState.reason}
+          joinButtonState={selectedJoinState}
           leaveDisabled={selectedLeaveDisabled}
-            isActionLoading={actionLoading}
+          isActionLoading={actionLoading}
           expiredNotice={selectedExpiredNotice}
           onCopyShare={() => handleCopyShareText(selectedTable.id)}
           onJoin={() => handleJoinTable(selectedTable.id)}
           onLeave={() => handleLeaveTable(selectedTable.id)}
           onClose={() => handleCloseRecruiting(selectedTable.id)}
           onCancel={() => handleCancelTable(selectedTable.id)}
-          onBack={() => setSelectedTableId(null)}
+          onBack={navigateToList}
         />
+      ) : routeRequestedDetail ? (
+        <section className="card empty-state">
+          <h3>탁을 찾을 수 없습니다.</h3>
+          <p>이미 취소되었거나 만료된 탁일 수 있습니다.</p>
+          <button type="button" className="btn-primary" onClick={navigateToList}>
+            목록으로 돌아가기
+          </button>
+        </section>
       ) : (
         <>
           <TableForm
@@ -594,7 +628,7 @@ function App() {
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => setSelectedTableId(recentCreatedTableId)}
+                  onClick={() => navigateToTableDetail(recentCreatedTableId)}
                 >
                   상세보기
                 </button>
@@ -615,10 +649,10 @@ function App() {
               <TableList
                 tables={myJoinedTables}
                 participants={participants}
-                getJoinState={canJoinTable}
+                getJoinButtonState={getJoinStateForTable}
                 isActionLoading={actionLoading}
                 onJoin={(tableId) => void handleJoinTable(tableId)}
-                onDetail={setSelectedTableId}
+                onDetail={navigateToTableDetail}
                 onCopyShare={handleCopyShareText}
                 onCreateTable={() => {
                   setIsCreateFormOpen(true);
@@ -633,10 +667,10 @@ function App() {
           <TableList
             tables={otherVisibleTables}
             participants={participants}
-            getJoinState={canJoinTable}
+            getJoinButtonState={getJoinStateForTable}
             isActionLoading={actionLoading}
             onJoin={(tableId) => void handleJoinTable(tableId)}
-            onDetail={setSelectedTableId}
+            onDetail={navigateToTableDetail}
             onCopyShare={handleCopyShareText}
             onCreateTable={() => {
               setIsCreateFormOpen(true);
@@ -645,6 +679,31 @@ function App() {
           />
           </section>
         </>
+      )}
+      {confirmAction && (
+        <div className="confirm-backdrop" role="dialog" aria-modal="true">
+          <section className="confirm-modal">
+            <h3>{confirmAction.kind === "close" ? "모집 마감" : "탁 취소"}</h3>
+            <p>
+              {confirmAction.kind === "close"
+                ? "모집을 마감할까요? 마감 후에는 더 이상 참가할 수 없습니다."
+                : "정말 이 탁을 취소할까요? 취소된 탁은 목록에서 보이지 않습니다."}
+            </p>
+            <div className="actions confirm-actions">
+              <button type="button" className="btn-ghost" onClick={() => setConfirmAction(null)}>
+                돌아가기
+              </button>
+              <button
+                type="button"
+                className={confirmAction.kind === "close" ? "btn-secondary" : "btn-danger"}
+                onClick={() => void handleConfirmAction()}
+                disabled={actionLoading}
+              >
+                {confirmAction.kind === "close" ? "마감하기" : "취소하기"}
+              </button>
+            </div>
+          </section>
+        </div>
       )}
     </div>
   );

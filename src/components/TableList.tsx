@@ -1,10 +1,11 @@
 import type { MahjongTable, Participant } from "../types";
+import type { JoinButtonState } from "../utils/joinButton";
 import { TableCard } from "./TableCard";
 
 type TableListProps = {
   tables: MahjongTable[];
   participants: Participant[];
-  getJoinState: (table: MahjongTable) => { disabled: boolean; reason?: string };
+  getJoinButtonState: (table: MahjongTable) => JoinButtonState;
   isActionLoading: boolean;
   onJoin: (tableId: string) => void;
   onDetail: (tableId: string) => void;
@@ -16,7 +17,7 @@ type TableListProps = {
 export function TableList({
   tables,
   participants,
-  getJoinState,
+  getJoinButtonState,
   isActionLoading,
   onJoin,
   onDetail,
@@ -41,14 +42,13 @@ export function TableList({
     <section className="list-wrap">
       {tables.map((table) => {
         const tableParticipants = participants.filter((participant) => participant.tableId === table.id);
-        const joinState = getJoinState(table);
+        const joinButtonState = getJoinButtonState(table);
         return (
           <TableCard
             key={table.id}
             table={table}
             participants={tableParticipants}
-            joinDisabled={joinState.disabled}
-            joinDisabledReason={joinState.reason}
+            joinButtonState={joinButtonState}
             isActionLoading={isActionLoading}
             onJoin={onJoin}
             onDetail={onDetail}
