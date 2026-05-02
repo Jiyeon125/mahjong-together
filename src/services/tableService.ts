@@ -1,4 +1,4 @@
-import { supabase } from "../lib/supabase";
+import { assertSupabaseConfigured, supabase } from "../lib/supabase";
 import type { CurrentUser, MahjongTable, Participant } from "../types";
 import { getEffectiveStatus, isTableExpired } from "../utils/tableStatus";
 import { createUUID } from "../utils/storage";
@@ -60,6 +60,10 @@ function mapTableRowToModel(row: TableRow): MahjongTable {
   };
 }
 
+function ensureSupabaseReady(): void {
+  assertSupabaseConfigured();
+}
+
 function mapParticipantRowToModel(row: ParticipantRow): Participant {
   return {
     id: row.id,
@@ -101,6 +105,7 @@ function mapParticipantModelToInsert(participant: Participant): ParticipantRow {
 }
 
 export async function fetchTables(): Promise<MahjongTable[]> {
+  ensureSupabaseReady();
   const { data, error } = await supabase
     .from("mahjong_tables")
     .select("*")
@@ -113,12 +118,14 @@ export async function fetchTables(): Promise<MahjongTable[]> {
 }
 
 export async function fetchParticipants(): Promise<Participant[]> {
+  ensureSupabaseReady();
   const { data, error } = await supabase.from("table_participants").select("*");
   if (error) throw error;
   return (data as ParticipantRow[]).map(mapParticipantRowToModel);
 }
 
 export async function createTable(input: CreateTablePayload): Promise<void> {
+  ensureSupabaseReady();
   validateTableTimeRange(input.endTime);
   const tableInsert = mapTableModelToInsert(input);
   const { error: tableError } = await supabase.from("mahjong_tables").insert(tableInsert);
@@ -146,6 +153,7 @@ async function getTableAndParticipants(tableId: string): Promise<{
   table: MahjongTable;
   tableParticipants: Participant[];
 }> {
+  ensureSupabaseReady();
   const { data: tableData, error: tableError } = await supabase
     .from("mahjong_tables")
     .select("*")
@@ -254,6 +262,7 @@ export async function leaveTable(tableId: string, currentUser: CurrentUser): Pro
 }
 
 export async function closeTable(tableId: string, currentUser: CurrentUser): Promise<void> {
+  ensureSupabaseReady();
   const { data, error } = await supabase
     .from("mahjong_tables")
     .select("host_user_id")
@@ -272,6 +281,7 @@ export async function closeTable(tableId: string, currentUser: CurrentUser): Pro
 }
 
 export async function cancelTable(tableId: string, currentUser: CurrentUser): Promise<void> {
+  ensureSupabaseReady();
   const { data, error } = await supabase
     .from("mahjong_tables")
     .select("host_user_id")
@@ -290,6 +300,7 @@ export async function cancelTable(tableId: string, currentUser: CurrentUser): Pr
 }
 
 export async function expireOldTables(): Promise<void> {
+  ensureSupabaseReady();
   const nowIso = new Date().toISOString();
   const { error } = await supabase
     .from("mahjong_tables")
