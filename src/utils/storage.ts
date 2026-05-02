@@ -44,6 +44,10 @@ export function getOrCreateCurrentUser(): CurrentUser {
 }
 
 export function saveCurrentUser(currentUser: CurrentUser): void {
+  // 초기 렌더의 빈 상태가 저장되어 userId가 꼬이지 않도록 방어한다.
+  if (!currentUser.userId?.trim()) {
+    return;
+  }
   try {
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(currentUser));
   } catch (error) {

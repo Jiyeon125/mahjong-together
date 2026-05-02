@@ -139,6 +139,7 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (!currentUser.userId?.trim()) return;
     saveCurrentUser(currentUser);
   }, [currentUser]);
 
