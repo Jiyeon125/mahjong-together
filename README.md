@@ -89,6 +89,45 @@ npm run build
 npm run preview
 ```
 
+## 자동화 스택
+
+### 로컬 품질 게이트 (Husky + lint-staged)
+
+- `git commit` 시 자동으로 staged 파일만 검사/정리됩니다.
+  - `eslint --fix` (`*.ts`, `*.tsx`, `*.js`, `*.jsx`)
+  - `prettier --write` (코드/스타일/문서/설정 파일)
+
+### NPM 스크립트
+
+- `npm run typecheck`: 타입 검사
+- `npm run lint`: ESLint 검사
+- `npm run format:check`: Prettier 포맷 검사
+- `npm run build`: 타입 검사 + Vite 빌드
+- `npm run audit`: high 이상 취약점 검사
+- `npm run check`: lint + format + build + audit 통합 검사
+
+### GitHub Actions
+
+- `CI` 워크플로우 (`.github/workflows/ci.yml`)
+  - PR/`main` push 시 `lint`, `format:check`, `build` 실행
+- `Security` 워크플로우 (`.github/workflows/security.yml`)
+  - PR/`main` push/6시간 주기 스케줄 시 `npm audit --audit-level=high`
+  - PR에서 `dependency-review-action`으로 위험 의존성 변경 점검
+  - 스케줄 점검 실패 시 `security` 이슈 자동 생성
+- `CodeQL` 워크플로우 (`.github/workflows/codeql.yml`)
+  - PR/`main` push/주간 스케줄로 정적 보안 분석(SAST) 실행
+
+### Dependabot
+
+- `.github/dependabot.yml` 설정으로
+  - npm 의존성 주간 자동 업데이트 PR 생성
+  - GitHub Actions 버전 주간 자동 업데이트 PR 생성
+
+### 사고 대응 문서
+
+- 보안 사고 대응 절차: `docs/security-incident-response.md`
+  - 탐지 → 격리 → 수정 → 복구 → 사후분석 표준 플로우 제공
+
 ## Supabase 테이블 가정
 
 ### `mahjong_tables`
