@@ -6,18 +6,20 @@ import { TableForm } from "./components/TableForm";
 import type { CreateTableInput } from "./components/TableForm";
 import { TableList } from "./components/TableList";
 import type { CurrentUser, FilterType, MahjongTable, Participant } from "./types";
-import { buildIsoRangeFromHHmm, getNowIso } from "./utils/date";
+import {
+  cancelTable,
+  closeTable,
+  createTable,
+  expireOldTables,
+  fetchParticipants,
+  fetchTables,
+  joinTable,
+  leaveTable,
+} from "./services/tableService";
+import { buildIsoRangeFromHHmm } from "./utils/date";
 import { buildTableShareText } from "./utils/share";
 import { applyEffectiveStatuses } from "./utils/tableStatus";
-import {
-  createSampleData,
-  createUUID,
-  ensureInitialData,
-  getOrCreateCurrentUser,
-  saveCurrentUser,
-  saveParticipants,
-  saveTables,
-} from "./utils/storage";
+import { createUUID, getOrCreateCurrentUser, resetLocalCurrentUser, saveCurrentUser } from "./utils/storage";
 import "./index.css";
 
 function getMemberRange(memberType: MahjongTable["memberType"]): {
@@ -34,6 +36,13 @@ function isNicknameValid(nickname: string): boolean {
   return trimmed.length > 0 && trimmed.length <= 20;
 }
 
+function getReadableErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) {
+    return `${fallback} (${error.message})`;
+  }
+  return fallback;
+}
+
 function App() {
   const [currentUser, setCurrentUser] = useState<CurrentUser>({
     userId: "",
@@ -45,34 +54,41 @@ function App() {
   const [filter, setFilter] = useState<FilterType>("ALL");
   const [message, setMessage] = useState("");
   const [shareFallbackText, setShareFallbackText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const refreshFromServer = async () => {
+    const [nextTables, nextParticipants] = await Promise.all([fetchTables(), fetchParticipants()]);
+    setTables(applyEffectiveStatuses(nextTables, nextParticipants));
+    setParticipants(nextParticipants);
+  };
 
   useEffect(() => {
-    const user = getOrCreateCurrentUser();
-    const initial = ensureInitialData(user);
-    setCurrentUser(user);
-    setTables(applyEffectiveStatuses(initial.tables, initial.participants));
-    setParticipants(initial.participants);
+    const initialize = async () => {
+      const user = getOrCreateCurrentUser();
+      setCurrentUser(user);
+      try {
+        await expireOldTables();
+        await refreshFromServer();
+      } catch (error) {
+        console.error(error);
+        setMessage(
+          getReadableErrorMessage(
+            error,
+            "Supabase 데이터를 불러오지 못했습니다. 환경변수와 권한 설정을 확인해주세요.",
+          ),
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void initialize();
   }, []);
 
   useEffect(() => {
     saveCurrentUser(currentUser);
   }, [currentUser]);
-
-  useEffect(() => {
-    saveTables(tables);
-  }, [tables]);
-
-  useEffect(() => {
-    saveParticipants(participants);
-  }, [participants]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      // 렌더링 중에도 만료 상태를 계속 동기화해 목록/상세 불일치를 막는다.
-      setTables((prev) => applyEffectiveStatuses(prev, participants));
-    }, 30_000);
-    return () => window.clearInterval(timer);
-  }, [participants]);
 
   const effectiveTables = useMemo(
     () => applyEffectiveStatuses(tables, participants),
@@ -148,12 +164,12 @@ function App() {
   };
 
   const handleRegenerateUserId = () => {
-    if (!window.confirm("새 사용자 ID로 전환할까요? (테스트용)")) return;
+    if (!window.confirm("로컬 사용자 정보를 초기화할까요?")) return;
     setCurrentUser((prev) => ({ ...prev, userId: createUUID() }));
-    setMessage("새 사용자 ID로 전환되었습니다.");
+    setMessage("로컬 사용자 ID가 초기화되었습니다.");
   };
 
-  const handleCreateTable = (input: CreateTableInput) => {
+  const handleCreateTable = async (input: CreateTableInput) => {
     if (!isNicknameValid(currentUser.nickname)) {
       setMessage("닉네임을 먼저 설정해주세요.");
       return;
@@ -176,41 +192,32 @@ function App() {
       return;
     }
 
-    const nowIso = getNowIso();
     const playerRange = getMemberRange(input.memberType);
-    const createdTable: MahjongTable = {
-      id: createUUID(),
-      title,
-      hostUserId: currentUser.userId,
-      hostNickname: currentUser.nickname.trim(),
-      memberType: input.memberType,
-      minPlayers: playerRange.minPlayers,
-      maxPlayers: playerRange.maxPlayers,
-      startTime: range.startIso,
-      endTime: range.endIso,
-      gameType: input.gameType,
-      description: input.description.trim(),
-      status: "RECRUITING",
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    };
-
-    const hostParticipant: Participant = {
-      id: createUUID(),
-      tableId: createdTable.id,
-      userId: currentUser.userId,
-      nickname: currentUser.nickname.trim(),
-      joinedAt: nowIso,
-    };
-
-    const nextParticipants = [...participants, hostParticipant];
-    const nextTables = applyEffectiveStatuses([...tables, createdTable], nextParticipants);
-    setParticipants(nextParticipants);
-    setTables(nextTables);
-    setMessage("친선탁이 생성되었습니다.");
+    setActionLoading(true);
+    try {
+      await createTable({
+        title,
+        hostUserId: currentUser.userId,
+        hostNickname: currentUser.nickname.trim(),
+        memberType: input.memberType,
+        minPlayers: playerRange.minPlayers,
+        maxPlayers: playerRange.maxPlayers,
+        startTime: range.startIso,
+        endTime: range.endIso,
+        gameType: input.gameType,
+        description: input.description.trim(),
+      });
+      await refreshFromServer();
+      setMessage("친선탁이 생성되었습니다.");
+    } catch (error) {
+      console.error(error);
+      setMessage(getReadableErrorMessage(error, "친선탁 생성에 실패했습니다."));
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const handleJoinTable = (tableId: string) => {
+  const handleJoinTable = async (tableId: string) => {
     const table = effectiveTables.find((item) => item.id === tableId);
     if (!table) return;
 
@@ -220,23 +227,20 @@ function App() {
       return;
     }
 
-    const nextParticipants = [
-      ...participants,
-      {
-        id: createUUID(),
-        tableId,
-        userId: currentUser.userId,
-        nickname: currentUser.nickname.trim(),
-        joinedAt: getNowIso(),
-      },
-    ];
-
-    setParticipants(nextParticipants);
-    setTables(applyEffectiveStatuses(tables, nextParticipants));
-    setMessage("탁에 참가했습니다.");
+    setActionLoading(true);
+    try {
+      await joinTable(tableId, currentUser);
+      await refreshFromServer();
+      setMessage("탁에 참가했습니다.");
+    } catch (error) {
+      console.error(error);
+      setMessage(getReadableErrorMessage(error, "참가에 실패했습니다."));
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const handleLeaveTable = (tableId: string) => {
+  const handleLeaveTable = async (tableId: string) => {
     const table = effectiveTables.find((item) => item.id === tableId);
     if (!table) return;
 
@@ -253,43 +257,53 @@ function App() {
       return;
     }
 
-    const nextParticipants = participants.filter(
-      (participant) => !(participant.tableId === tableId && participant.userId === currentUser.userId),
-    );
-    setParticipants(nextParticipants);
-    setTables(applyEffectiveStatuses(tables, nextParticipants));
-    setMessage("탁에서 나갔습니다.");
+    setActionLoading(true);
+    try {
+      await leaveTable(tableId, currentUser);
+      await refreshFromServer();
+      setMessage("탁에서 나갔습니다.");
+    } catch (error) {
+      console.error(error);
+      setMessage(getReadableErrorMessage(error, "나가기에 실패했습니다."));
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const handleCloseRecruiting = (tableId: string) => {
-    const nextTables = tables.map((table) =>
-      table.id === tableId && table.hostUserId === currentUser.userId
-        ? { ...table, status: "CLOSED" as const, updatedAt: getNowIso() }
-        : table,
-    );
-    setTables(nextTables);
-    setMessage("모집이 마감되었습니다.");
+  const handleCloseRecruiting = async (tableId: string) => {
+    setActionLoading(true);
+    try {
+      await closeTable(tableId, currentUser);
+      await refreshFromServer();
+      setMessage("모집이 마감되었습니다.");
+    } catch (error) {
+      console.error(error);
+      setMessage(getReadableErrorMessage(error, "모집 마감에 실패했습니다."));
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const handleCancelTable = (tableId: string) => {
-    const nextTables = tables.map((table) =>
-      table.id === tableId && table.hostUserId === currentUser.userId
-        ? { ...table, status: "CANCELLED" as const, updatedAt: getNowIso() }
-        : table,
-    );
-    setTables(nextTables);
-    setSelectedTableId(null);
-    setMessage("탁이 취소되었습니다.");
+  const handleCancelTable = async (tableId: string) => {
+    setActionLoading(true);
+    try {
+      await cancelTable(tableId, currentUser);
+      await refreshFromServer();
+      setSelectedTableId(null);
+      setMessage("탁이 취소되었습니다.");
+    } catch (error) {
+      console.error(error);
+      setMessage(getReadableErrorMessage(error, "탁 취소에 실패했습니다."));
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const handleResetData = () => {
-    if (!window.confirm("데이터를 샘플 상태로 초기화할까요?")) return;
-    const sample = createSampleData(currentUser);
-    const syncedTables = applyEffectiveStatuses(sample.tables, sample.participants);
-    setTables(syncedTables);
-    setParticipants(sample.participants);
-    setSelectedTableId(null);
-    setMessage("데이터 초기화가 완료되었습니다.");
+  const handleResetLocalUser = () => {
+    if (!window.confirm("로컬 사용자 정보(userId, 닉네임)를 초기화할까요?")) return;
+    const resetUser = resetLocalCurrentUser();
+    setCurrentUser(resetUser);
+    setMessage("로컬 사용자 정보가 초기화되었습니다.");
   };
 
   const handleCopyShareText = async (tableId: string) => {
@@ -326,6 +340,20 @@ function App() {
     !isSelectedTableJoinedByMe ||
     selectedTable.hostUserId === currentUser.userId ||
     ["CLOSED", "CANCELLED", "EXPIRED"].includes(selectedTable.status);
+
+  if (loading) {
+    return (
+      <div className="app">
+        <header className="header">
+          <h1>마작투게더</h1>
+          <p>마작일번가 오픈채팅 친선탁 모집판</p>
+        </header>
+        <section className="card">
+          <p>데이터를 불러오는 중...</p>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
@@ -392,13 +420,16 @@ function App() {
         />
       ) : (
         <>
-          <TableForm disabled={!isNicknameValid(currentUser.nickname)} onCreate={handleCreateTable} />
+          <TableForm
+            disabled={!isNicknameValid(currentUser.nickname) || actionLoading}
+            onCreate={(input) => void handleCreateTable(input)}
+          />
           <FilterTabs value={filter} onChange={setFilter} />
           <TableList
             tables={visibleTables}
             participants={participants}
             getJoinState={canJoinTable}
-            onJoin={handleJoinTable}
+            onJoin={(tableId) => void handleJoinTable(tableId)}
             onDetail={setSelectedTableId}
             onCopyShare={handleCopyShareText}
           />
@@ -406,8 +437,8 @@ function App() {
       )}
 
       <footer className="footer-tools">
-        <button type="button" className="btn-ghost small" onClick={handleResetData}>
-          데이터 초기화
+        <button type="button" className="btn-ghost small" onClick={handleResetLocalUser}>
+          로컬 사용자 정보 초기화
         </button>
       </footer>
     </div>
