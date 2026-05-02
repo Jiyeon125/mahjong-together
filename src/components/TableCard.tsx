@@ -13,6 +13,7 @@ type TableCardProps = {
   participants: Participant[];
   joinDisabled: boolean;
   joinDisabledReason?: string;
+  isActionLoading: boolean;
   onJoin: (tableId: string) => void;
   onDetail: (tableId: string) => void;
   onCopyShare: (tableId: string) => void;
@@ -23,6 +24,7 @@ export function TableCard({
   participants,
   joinDisabled,
   joinDisabledReason,
+  isActionLoading,
   onJoin,
   onDetail,
   onCopyShare,
@@ -30,6 +32,7 @@ export function TableCard({
   const progressPercent = Math.min(100, Math.round((participants.length / table.maxPlayers) * 100));
   const capacityHint = getCapacityHint(table, participants.length);
   const getJoinButtonText = (): string => {
+    if (isActionLoading) return "처리 중...";
     if (!joinDisabled) return "참가하기";
     if (joinDisabledReason === "이미 참가한 탁입니다.") return "이미 참가 중";
     if (joinDisabledReason === "이미 모집 인원이 가득 찼습니다.") return "정원 마감";
@@ -92,7 +95,7 @@ export function TableCard({
             event.stopPropagation();
             onJoin(table.id);
           }}
-          disabled={joinDisabled}
+          disabled={joinDisabled || isActionLoading}
           title={joinDisabledReason}
         >
           {getJoinButtonText()}

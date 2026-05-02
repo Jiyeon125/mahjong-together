@@ -12,7 +12,9 @@ type TableDetailProps = {
   participants: Participant[];
   currentUserId: string;
   joinDisabled: boolean;
+  joinDisabledReason?: string;
   leaveDisabled: boolean;
+  isActionLoading: boolean;
   expiredNotice: boolean;
   onCopyShare: () => void;
   onJoin: () => void;
@@ -27,7 +29,9 @@ export function TableDetail({
   participants,
   currentUserId,
   joinDisabled,
+  joinDisabledReason,
   leaveDisabled,
+  isActionLoading,
   expiredNotice,
   onCopyShare,
   onJoin,
@@ -37,6 +41,15 @@ export function TableDetail({
   onBack,
 }: TableDetailProps) {
   const isHost = table.hostUserId === currentUserId;
+  const getJoinText = (): string => {
+    if (isActionLoading) return "처리 중...";
+    if (!joinDisabled) return "참가하기";
+    if (joinDisabledReason === "이미 참가한 탁입니다.") return "이미 참가 중";
+    if (joinDisabledReason === "이미 모집 인원이 가득 찼습니다.") return "정원 마감";
+    if (joinDisabledReason === "시간이 지난 탁에는 참가할 수 없습니다.") return "만료됨";
+    if (joinDisabledReason === "마감된 탁에는 참가할 수 없습니다.") return "모집 마감";
+    return "참가 불가";
+  };
   const seats = Array.from({ length: table.maxPlayers }).map((_, index) => participants[index] ?? null);
 
   return (
@@ -74,25 +87,40 @@ export function TableDetail({
         </button>
         {!isHost ? (
           <>
-            <button type="button" className="btn-primary" onClick={onJoin} disabled={joinDisabled}>
-              참가하기
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={onJoin}
+              disabled={joinDisabled || isActionLoading}
+            >
+              {getJoinText()}
             </button>
-            <button type="button" className="btn-secondary" onClick={onLeave} disabled={leaveDisabled}>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={onLeave}
+              disabled={leaveDisabled || isActionLoading}
+            >
               나가기
             </button>
           </>
         ) : (
           <>
-            <button type="button" className="btn-secondary" onClick={onClose} disabled={table.status === "CLOSED"}>
-              모집 마감
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={onClose}
+              disabled={table.status === "CLOSED" || isActionLoading}
+            >
+              {isActionLoading ? "처리 중..." : "모집 마감"}
             </button>
             <button
               type="button"
               className="btn-danger"
               onClick={onCancel}
-              disabled={table.status === "CANCELLED"}
+              disabled={table.status === "CANCELLED" || isActionLoading}
             >
-              탁 취소
+              {isActionLoading ? "처리 중..." : "탁 취소"}
             </button>
           </>
         )}

@@ -102,7 +102,7 @@ textarea {
 button {
   border: 0;
   border-radius: 10px;
-  min-height: 42px;
+  min-height: 44px;
   padding: 0 14px;
   cursor: pointer;
 }
@@ -148,11 +148,12 @@ button:disabled {
 }
 
 .filter-btn {
-  min-height: 36px;
+  min-height: 38px;
   border: 1px solid #c9dbcd;
   background: #ffffff;
   color: #2f4e3a;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .filter-btn.active {
@@ -321,11 +322,29 @@ button:disabled {
 
 .toast {
   border-radius: 10px;
-  border: 1px solid #c7decb;
-  background: #edf7ef;
-  color: #2a5a3f;
+  border: 1px solid #c9d6cc;
+  background: #f4f8f5;
+  color: #335846;
   padding: 10px 12px;
   font-size: 0.92rem;
+}
+
+.toast.success {
+  border-color: #c7decb;
+  background: #edf7ef;
+  color: #2a5a3f;
+}
+
+.toast.error {
+  border-color: #efd3d3;
+  background: #fff3f3;
+  color: #7c3c3c;
+}
+
+.toast.info {
+  border-color: #c9d6cc;
+  background: #f4f8f5;
+  color: #335846;
 }
 
 .subtle {
@@ -375,6 +394,15 @@ button:disabled {
 }
 
 @media (max-width: 420px) {
+  .app {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .card {
+    padding: 12px;
+  }
+
   .row {
     grid-template-columns: 1fr;
   }

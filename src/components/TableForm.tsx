@@ -12,10 +12,11 @@ export type CreateTableInput = {
 
 type TableFormProps = {
   disabled: boolean;
+  isActionLoading: boolean;
   onCreate: (input: CreateTableInput) => void;
 };
 
-export function TableForm({ disabled, onCreate }: TableFormProps) {
+export function TableForm({ disabled, isActionLoading, onCreate }: TableFormProps) {
   const [title, setTitle] = useState("");
   const [memberType, setMemberType] = useState<MemberType>("FOUR");
   const [startTime, setStartTime] = useState("");
@@ -121,8 +122,8 @@ export function TableForm({ disabled, onCreate }: TableFormProps) {
         />
       </div>
 
-      <button type="button" className="btn-primary" onClick={submit} disabled={disabled}>
-        생성하기
+      <button type="button" className="btn-primary" onClick={submit} disabled={disabled || isActionLoading}>
+        {isActionLoading ? "생성 중..." : "생성하기"}
       </button>
     </section>
   );

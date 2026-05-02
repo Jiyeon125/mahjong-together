@@ -57,6 +57,8 @@ function getReadableErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+type MessageTone = "success" | "error" | "info";
+
 function App() {
   const [currentUser, setCurrentUser] = useState<CurrentUser>({
     userId: "",
@@ -67,6 +69,7 @@ function App() {
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>("ALL");
   const [message, setMessage] = useState("");
+  const [messageTone, setMessageTone] = useState<MessageTone>("info");
   const [shareFallbackText, setShareFallbackText] = useState("");
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -87,6 +90,7 @@ function App() {
       } catch (error) {
         console.error(error);
         setMessage("데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+        setMessageTone("error");
       } finally {
         setLoading(false);
       }
@@ -166,24 +170,29 @@ function App() {
     const trimmed = nickname.trim();
     if (!isNicknameValid(trimmed)) {
       setMessage("닉네임은 공백 없이 1~20자로 입력해주세요.");
+      setMessageTone("error");
       return;
     }
     setCurrentUser((prev) => ({ ...prev, nickname: trimmed }));
     setMessage("닉네임이 저장되었습니다.");
+    setMessageTone("success");
   };
 
   const handleCreateTable = async (input: CreateTableInput) => {
     if (!isNicknameValid(currentUser.nickname)) {
       setMessage("닉네임을 먼저 설정해주세요.");
+      setMessageTone("error");
       return;
     }
     const title = input.title.trim();
     if (!title) {
       setMessage("제목을 입력해주세요.");
+      setMessageTone("error");
       return;
     }
     if (!input.startTime || !input.endTime) {
       setMessage("시작 시간과 종료 시간을 입력해주세요.");
+      setMessageTone("error");
       return;
     }
 
@@ -195,6 +204,7 @@ function App() {
       const errorMessage =
         error instanceof Error ? error.message : "시간 형식이 올바르지 않거나 이미 종료된 시간입니다.";
       setMessage(errorMessage);
+      setMessageTone("error");
       return;
     }
 
@@ -215,9 +225,11 @@ function App() {
       });
       await refreshFromServer();
       setMessage("친선탁이 생성되었습니다.");
+      setMessageTone("success");
     } catch (error) {
       console.error(error);
       setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
+      setMessageTone("error");
     } finally {
       setActionLoading(false);
     }
@@ -237,12 +249,14 @@ function App() {
         setActionLoading(false);
       }
       setMessage("시간이 지난 탁에는 참가할 수 없습니다.");
+      setMessageTone("error");
       return;
     }
 
     const joinState = canJoinTable(table);
     if (joinState.disabled) {
       setMessage(joinState.reason ?? "참가할 수 없습니다.");
+      setMessageTone("error");
       return;
     }
 
@@ -251,9 +265,11 @@ function App() {
       await joinTable(tableId, currentUser);
       await refreshFromServer();
       setMessage("탁에 참가했습니다.");
+      setMessageTone("success");
     } catch (error) {
       console.error(error);
       setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
+      setMessageTone("error");
     } finally {
       setActionLoading(false);
     }
@@ -265,6 +281,7 @@ function App() {
 
     if (table.hostUserId === currentUser.userId) {
       setMessage("생성자는 나가기 대신 탁 취소를 사용할 수 있습니다.");
+      setMessageTone("error");
       return;
     }
 
@@ -273,6 +290,7 @@ function App() {
     );
     if (!joined) {
       setMessage("참가 중인 탁이 아닙니다.");
+      setMessageTone("error");
       return;
     }
 
@@ -281,9 +299,11 @@ function App() {
       await leaveTable(tableId, currentUser);
       await refreshFromServer();
       setMessage("탁에서 나갔습니다.");
+      setMessageTone("success");
     } catch (error) {
       console.error(error);
       setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
+      setMessageTone("error");
     } finally {
       setActionLoading(false);
     }
@@ -295,9 +315,11 @@ function App() {
       await closeTable(tableId, currentUser);
       await refreshFromServer();
       setMessage("모집이 마감되었습니다.");
+      setMessageTone("success");
     } catch (error) {
       console.error(error);
       setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
+      setMessageTone("error");
     } finally {
       setActionLoading(false);
     }
@@ -310,9 +332,11 @@ function App() {
       await refreshFromServer();
       setSelectedTableId(null);
       setMessage("탁이 취소되었습니다.");
+      setMessageTone("success");
     } catch (error) {
       console.error(error);
       setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
+      setMessageTone("error");
     } finally {
       setActionLoading(false);
     }
@@ -335,10 +359,12 @@ function App() {
       await navigator.clipboard.writeText(shareText);
       setShareFallbackText("");
       setMessage("공유 문구가 복사되었습니다.");
+      setMessageTone("success");
     } catch (error) {
       console.error("공유 문구 복사 실패:", error);
       setShareFallbackText(shareText);
       setMessage("복사에 실패했습니다. 아래 문구를 직접 복사해주세요.");
+      setMessageTone("error");
     }
   };
 
@@ -379,7 +405,7 @@ function App() {
         </p>
       </header>
 
-      {message && <div className="toast">{message}</div>}
+      {message && <div className={`toast ${messageTone}`}>{message}</div>}
       {shareFallbackText && (
         <section className="card">
           <h2>직접 복사하기</h2>
@@ -396,10 +422,18 @@ function App() {
               type="button"
               className="btn-secondary"
               onClick={() => {
-                navigator.clipboard?.writeText(shareFallbackText).then(() => {
-                  setShareFallbackText("");
-                  setMessage("공유 문구가 복사되었습니다.");
-                });
+                navigator.clipboard
+                  ?.writeText(shareFallbackText)
+                  .then(() => {
+                    setShareFallbackText("");
+                    setMessage("공유 문구가 복사되었습니다.");
+                    setMessageTone("success");
+                  })
+                  .catch((error) => {
+                    console.error("공유 문구 재복사 실패:", error);
+                    setMessage("복사에 실패했습니다. 문구를 직접 복사해주세요.");
+                    setMessageTone("error");
+                  });
               }}
             >
               다시 복사 시도
@@ -422,7 +456,9 @@ function App() {
           participants={selectedParticipants}
           currentUserId={currentUser.userId}
           joinDisabled={selectedJoinState.disabled}
+            joinDisabledReason={selectedJoinState.reason}
           leaveDisabled={selectedLeaveDisabled}
+            isActionLoading={actionLoading}
           expiredNotice={selectedExpiredNotice}
           onCopyShare={() => handleCopyShareText(selectedTable.id)}
           onJoin={() => handleJoinTable(selectedTable.id)}
@@ -435,6 +471,7 @@ function App() {
         <>
           <TableForm
             disabled={!isNicknameValid(currentUser.nickname) || actionLoading}
+            isActionLoading={actionLoading}
             onCreate={(input) => void handleCreateTable(input)}
           />
           <FilterTabs value={filter} onChange={setFilter} />
@@ -442,6 +479,7 @@ function App() {
             tables={visibleTables}
             participants={participants}
             getJoinState={canJoinTable}
+            isActionLoading={actionLoading}
             onJoin={(tableId) => void handleJoinTable(tableId)}
             onDetail={setSelectedTableId}
             onCopyShare={handleCopyShareText}

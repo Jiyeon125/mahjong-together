@@ -5,6 +5,7 @@ type TableListProps = {
   tables: MahjongTable[];
   participants: Participant[];
   getJoinState: (table: MahjongTable) => { disabled: boolean; reason?: string };
+  isActionLoading: boolean;
   onJoin: (tableId: string) => void;
   onDetail: (tableId: string) => void;
   onCopyShare: (tableId: string) => void;
@@ -15,6 +16,7 @@ export function TableList({
   tables,
   participants,
   getJoinState,
+  isActionLoading,
   onJoin,
   onDetail,
   onCopyShare,
@@ -44,6 +46,7 @@ export function TableList({
             participants={tableParticipants}
             joinDisabled={joinState.disabled}
             joinDisabledReason={joinState.reason}
+            isActionLoading={isActionLoading}
             onJoin={onJoin}
             onDetail={onDetail}
             onCopyShare={onCopyShare}
