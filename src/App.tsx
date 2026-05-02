@@ -796,7 +796,7 @@ function App() {
                 ? "모집을 마감할까요? 마감 후에는 더 이상 참가할 수 없습니다."
                 : confirmAction.kind === "cancel"
                   ? "정말 이 탁을 취소할까요? 취소된 탁은 목록에서 보이지 않습니다."
-                  : "이 탁에서 나갈까요? 나가면 다시 참가 버튼으로 바뀝니다."}
+                  : "이 탁에서 나갈까요? 마음이 바뀌면 탁에 다시 참여할 수 있습니다."}
             </p>
             <div className="actions confirm-actions">
               <button type="button" className="btn-ghost" onClick={() => setConfirmAction(null)}>

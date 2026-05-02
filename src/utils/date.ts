@@ -54,8 +54,18 @@ export function buildIsoRangeFromHHmm(
   startHHmm: string,
   endHHmm: string,
 ): { startIso: string; endIso: string } {
-  const start = createDateTimeFromTimeInput(startHHmm);
-  const end = createDateTimeFromTimeInput(endHHmm);
+  const now = new Date();
+  const start = createDateTimeFromTimeInput(startHHmm, now);
+  const end = createDateTimeFromTimeInput(endHHmm, now);
+
+  // 밤 시간(예: 23시)에 00:00~03:00처럼 새벽 시간을 입력하면
+  // 사용자의 의도를 "다음날 새벽"으로 해석해 과거 판정을 피한다.
+  const isLateNightCreation = now.getHours() >= 18;
+  const isEarlyMorningStart = start.getHours() < 6;
+  if (isLateNightCreation && isEarlyMorningStart && start <= now) {
+    start.setDate(start.getDate() + 1);
+    end.setDate(end.getDate() + 1);
+  }
 
   // 23:00 ~ 01:00 같은 케이스를 다음날 종료로 처리
   if (end <= start) {
