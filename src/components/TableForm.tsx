@@ -86,7 +86,7 @@ export function TableForm({
           id="table-title"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          placeholder="예: 오늘 23시 4인 반장 하실 분"
+          placeholder="예: 오늘 23시 4마 하실 분 구합니다"
           maxLength={40}
         />
       </div>
@@ -114,6 +114,7 @@ export function TableForm({
             type="time"
             value={startTime}
             onChange={(event) => setStartTime(event.target.value)}
+            step={300}
           />
         </div>
         <div className="field">
@@ -123,6 +124,7 @@ export function TableForm({
             type="time"
             value={endTime}
             onChange={(event) => setEndTime(event.target.value)}
+            step={300}
           />
         </div>
       </div>
@@ -148,7 +150,7 @@ export function TableForm({
           onChange={(event) => setDescription(event.target.value)}
           rows={3}
           maxLength={200}
-          placeholder="예: 초보 가능, 편하게 한 판"
+          placeholder="예: 초보 환영합니다, 편하게 한 판 하시죠!"
         />
       </div>
 
