@@ -1,0 +1,297 @@
+:root {
+  font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  line-height: 1.4;
+  color: #1e2b22;
+  background: #f1f6f2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.app {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.header {
+  padding: 8px 2px;
+}
+
+.header h1 {
+  margin: 0;
+  color: #1f5134;
+  font-size: 1.6rem;
+}
+
+.header p {
+  margin: 4px 0 0;
+  color: #4a5c50;
+  font-size: 0.95rem;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #d9e5db;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 6px 16px rgba(31, 81, 52, 0.06);
+}
+
+.card h2,
+.card h3 {
+  margin: 0 0 8px;
+  color: #204731;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.field label {
+  font-size: 0.88rem;
+  color: #375240;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid #bdd0c2;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fbfefc;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  min-height: 42px;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.btn-primary {
+  background: #2f8250;
+  color: #fff;
+}
+
+.btn-secondary {
+  background: #dceddf;
+  color: #204731;
+}
+
+.btn-danger {
+  background: #d65757;
+  color: #fff;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid #aac4b2;
+  color: #335843;
+}
+
+.btn-ghost.small {
+  min-height: 34px;
+  font-size: 0.85rem;
+  padding: 0 10px;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.filter-btn {
+  min-height: 36px;
+  border: 1px solid #c9dbcd;
+  background: #ffffff;
+  color: #2f4e3a;
+  white-space: nowrap;
+}
+
+.filter-btn.active {
+  background: #2f8250;
+  border-color: #2f8250;
+  color: #fff;
+}
+
+.list-wrap {
+  display: grid;
+  gap: 10px;
+}
+
+.table-card {
+  cursor: pointer;
+}
+
+.table-header {
+  display: grid;
+  gap: 8px;
+}
+
+.status-badge {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-badge.recruiting {
+  background: #e6f6ec;
+  color: #1f6c40;
+}
+
+.status-badge.ready {
+  background: #e2f2ff;
+  color: #2a5578;
+}
+
+.status-badge.ready-three {
+  background: #e2f2ff;
+  color: #2a5578;
+}
+
+.status-badge.ready-four {
+  background: #e2f2ff;
+  color: #2a5578;
+}
+
+.status-badge.closed {
+  background: #eceef0;
+  color: #48515a;
+}
+
+.status-badge.cancelled,
+.status-badge.expired {
+  background: #f6e6e6;
+  color: #7a3838;
+}
+
+.meta {
+  display: grid;
+  gap: 5px;
+  font-size: 0.93rem;
+  color: #2b4735;
+}
+
+.meta p {
+  margin: 0;
+}
+
+.participants {
+  margin: 10px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.participant-pill {
+  background: #edf5ef;
+  color: #28503a;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+}
+
+.seat-list {
+  margin: 12px 0;
+  padding: 10px;
+  border-radius: 10px;
+  background: #f8fbf9;
+  border: 1px solid #d8e4dc;
+}
+
+.seat-list p {
+  margin: 0 0 4px;
+}
+
+.seat-list p:last-child {
+  margin-bottom: 0;
+}
+
+.warning {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #f0cf95;
+  background: #fff5e4;
+  color: #8b6222;
+}
+
+.toast {
+  border-radius: 10px;
+  border: 1px solid #c7decb;
+  background: #edf7ef;
+  color: #2a5a3f;
+  padding: 10px 12px;
+  font-size: 0.92rem;
+}
+
+.subtle {
+  margin: 8px 0 0;
+  color: #64806f;
+  font-size: 0.78rem;
+  word-break: break-all;
+}
+
+.share-textarea {
+  margin: 10px 0;
+  min-height: 180px;
+}
+
+.footer-tools {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 8px;
+}
+
+@media (max-width: 420px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+
+  .actions button {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 130px;
+  }
+}
