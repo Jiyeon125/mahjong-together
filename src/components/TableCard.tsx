@@ -14,6 +14,7 @@ type TableCardProps = {
   participants: Participant[];
   joinButtonState: JoinButtonState;
   isJoinLoading: boolean;
+  isCopyLoading: boolean;
   onJoin: (tableId: string) => void;
   onDetail: (tableId: string) => void;
   onCopyShare: (tableId: string) => void;
@@ -24,6 +25,7 @@ export function TableCard({
   participants,
   joinButtonState,
   isJoinLoading,
+  isCopyLoading,
   onJoin,
   onDetail,
   onCopyShare,
@@ -112,8 +114,9 @@ export function TableCard({
             event.stopPropagation();
             onCopyShare(table.id);
           }}
+          disabled={isCopyLoading}
         >
-          공유 문구 복사
+          {isCopyLoading ? "복사 중..." : "공유 문구 복사"}
         </button>
       </div>
     </article>

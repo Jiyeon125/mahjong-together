@@ -16,6 +16,7 @@ type TableDetailProps = {
   isJoinLoading: boolean;
   isLeaveLoading: boolean;
   isManageLoading: boolean;
+  isCopyLoading: boolean;
   leaveDisabled: boolean;
   expiredNotice: boolean;
   onCopyShare: () => void;
@@ -34,6 +35,7 @@ export function TableDetail({
   isJoinLoading,
   isLeaveLoading,
   isManageLoading,
+  isCopyLoading,
   leaveDisabled,
   expiredNotice,
   onCopyShare,
@@ -123,8 +125,13 @@ export function TableDetail({
           </>
         )}
         </div>
-        <button type="button" className="btn-ghost detail-single-btn" onClick={onCopyShare}>
-          공유 문구 복사
+        <button
+          type="button"
+          className="btn-ghost detail-single-btn"
+          onClick={onCopyShare}
+          disabled={isCopyLoading}
+        >
+          {isCopyLoading ? "복사 중..." : "공유 문구 복사"}
         </button>
         <button type="button" className="btn-ghost detail-single-btn" onClick={onBack}>
           목록으로

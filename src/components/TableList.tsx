@@ -7,6 +7,7 @@ type TableListProps = {
   participants: Participant[];
   getJoinButtonState: (table: MahjongTable) => JoinButtonState;
   joiningTableId: string | null;
+  copyingTableId: string | null;
   onJoin: (tableId: string) => void;
   onDetail: (tableId: string) => void;
   onCopyShare: (tableId: string) => void;
@@ -19,6 +20,7 @@ export function TableList({
   participants,
   getJoinButtonState,
   joiningTableId,
+  copyingTableId,
   onJoin,
   onDetail,
   onCopyShare,
@@ -50,6 +52,7 @@ export function TableList({
             participants={tableParticipants}
             joinButtonState={joinButtonState}
             isJoinLoading={joiningTableId === table.id}
+            isCopyLoading={copyingTableId === table.id}
             onJoin={onJoin}
             onDetail={onDetail}
             onCopyShare={onCopyShare}

@@ -82,10 +82,12 @@ function App() {
   const [message, setMessage] = useState("");
   const [messageTone, setMessageTone] = useState<MessageTone>("info");
   const [shareFallbackText, setShareFallbackText] = useState("");
+  const [fallbackCopyLoading, setFallbackCopyLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [createLoading, setCreateLoading] = useState(false);
   const [nicknameSaving, setNicknameSaving] = useState(false);
   const [joiningTableId, setJoiningTableId] = useState<string | null>(null);
+  const [copyingTableId, setCopyingTableId] = useState<string | null>(null);
   const [leavingTableId, setLeavingTableId] = useState<string | null>(null);
   const [manageTableId, setManageTableId] = useState<string | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -484,6 +486,7 @@ function App() {
     const table = effectiveTables.find((item) => item.id === tableId);
     if (!table) return;
 
+    setCopyingTableId(tableId);
     const tableParticipants = normalizedParticipants
       .filter((participant) => participant.tableId === tableId)
       .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
@@ -503,6 +506,8 @@ function App() {
       setShareFallbackText(shareText);
       setMessage("복사에 실패했습니다. 아래 문구를 직접 복사해주세요.");
       setMessageTone("error");
+    } finally {
+      setCopyingTableId((prev) => (prev === tableId ? null : prev));
     }
   };
 
@@ -626,22 +631,29 @@ function App() {
             <button
               type="button"
               className="btn-secondary"
+              disabled={fallbackCopyLoading}
               onClick={() => {
-                navigator.clipboard
-                  ?.writeText(shareFallbackText)
-                  .then(() => {
+                void (async () => {
+                  setFallbackCopyLoading(true);
+                  try {
+                    if (!navigator.clipboard?.writeText) {
+                      throw new Error("Clipboard API 미지원");
+                    }
+                    await navigator.clipboard.writeText(shareFallbackText);
                     setShareFallbackText("");
                     setMessage("공유 문구가 복사되었습니다.");
                     setMessageTone("success");
-                  })
-                  .catch((error) => {
+                  } catch (error) {
                     console.error("공유 문구 재복사 실패:", error);
                     setMessage("복사에 실패했습니다. 문구를 직접 복사해주세요.");
                     setMessageTone("error");
-                  });
+                  } finally {
+                    setFallbackCopyLoading(false);
+                  }
+                })();
               }}
             >
-              다시 복사 시도
+              {fallbackCopyLoading ? "복사 중..." : "다시 복사 시도"}
             </button>
             <button type="button" className="btn-ghost" onClick={() => setShareFallbackText("")}>
               닫기
@@ -668,6 +680,7 @@ function App() {
           isJoinLoading={joiningTableId === selectedTable.id}
           isLeaveLoading={leavingTableId === selectedTable.id}
           isManageLoading={manageTableId === selectedTable.id}
+          isCopyLoading={copyingTableId === selectedTable.id}
           leaveDisabled={selectedLeaveDisabled}
           expiredNotice={selectedExpiredNotice}
           onCopyShare={() => handleCopyShareText(selectedTable.id)}
@@ -702,8 +715,9 @@ function App() {
                   type="button"
                   className="btn-primary"
                   onClick={() => void handleCopyShareText(recentCreatedTableId)}
+                  disabled={copyingTableId === recentCreatedTableId}
                 >
-                  공유 문구 복사
+                  {copyingTableId === recentCreatedTableId ? "복사 중..." : "공유 문구 복사"}
                 </button>
                 <button
                   type="button"
@@ -731,6 +745,7 @@ function App() {
                 participants={normalizedParticipants}
                 getJoinButtonState={getJoinStateForTable}
                 joiningTableId={joiningTableId}
+                copyingTableId={copyingTableId}
                 onJoin={(tableId) => void handleJoinTable(tableId)}
                 onDetail={navigateToTableDetail}
                 onCopyShare={handleCopyShareText}
@@ -749,6 +764,7 @@ function App() {
             participants={normalizedParticipants}
             getJoinButtonState={getJoinStateForTable}
             joiningTableId={joiningTableId}
+            copyingTableId={copyingTableId}
             onJoin={(tableId) => void handleJoinTable(tableId)}
             onDetail={navigateToTableDetail}
             onCopyShare={handleCopyShareText}
