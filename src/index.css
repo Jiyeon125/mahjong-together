@@ -402,6 +402,16 @@ button:disabled {
   color: #335846;
 }
 
+.toast-floating {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  width: min(92vw, 420px);
+  z-index: 1000;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
 .subtle {
   margin: 8px 0 0;
   color: #64806f;

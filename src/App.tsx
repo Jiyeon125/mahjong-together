@@ -79,6 +79,14 @@ function App() {
   const [showJoinNicknamePrompt, setShowJoinNicknamePrompt] = useState(false);
   const [recentCreatedTableId, setRecentCreatedTableId] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!message) return;
+    const timeout = window.setTimeout(() => {
+      setMessage("");
+    }, 2600);
+    return () => window.clearTimeout(timeout);
+  }, [message]);
+
   const refreshFromServer = async () => {
     await expireOldTables();
     const [nextTables, nextParticipants] = await Promise.all([fetchTables(), fetchParticipants()]);
@@ -228,7 +236,7 @@ function App() {
       await refreshFromServer();
       setRecentCreatedTableId(createdTableId);
       setIsCreateFormOpen(false);
-      setMessage("친선탁이 생성되었습니다.");
+      setMessage("친선탁이 생성되었습니다. 공유 문구를 복사해 오픈채팅에 올려보세요.");
       setMessageTone("success");
     } catch (error) {
       console.error(error);
@@ -325,6 +333,9 @@ function App() {
   };
 
   const handleCloseRecruiting = async (tableId: string) => {
+    if (!window.confirm("모집을 마감할까요? 마감 후에는 더 이상 참가할 수 없습니다.")) {
+      return;
+    }
     setActionLoading(true);
     try {
       await closeTable(tableId, currentUser);
@@ -436,6 +447,7 @@ function App() {
         <section className="card">
           <p>데이터를 불러오는 중...</p>
         </section>
+        {message && <div className={`toast toast-floating ${messageTone}`}>{message}</div>}
       </div>
     );
   }
@@ -450,7 +462,7 @@ function App() {
             친선탁을 만들고 참가자를 모집해 보세요!
           </p>
         </header>
-        {message && <div className={`toast ${messageTone}`}>{message}</div>}
+        {message && <div className={`toast toast-floating ${messageTone}`}>{message}</div>}
         <NicknameBox currentUser={currentUser} onSaveNickname={handleSaveNickname} />
       </div>
     );
@@ -466,7 +478,7 @@ function App() {
         </p>
       </header>
 
-      {message && <div className={`toast ${messageTone}`}>{message}</div>}
+      {message && <div className={`toast toast-floating ${messageTone}`}>{message}</div>}
       {showJoinNicknamePrompt && (
         <section className="card join-prompt">
           <h2>참가하려면 닉네임이 필요합니다.</h2>
