@@ -20,7 +20,7 @@ import {
 import { buildIsoRangeFromHHmm } from "./utils/date";
 import { buildTableShareText } from "./utils/share";
 import { applyEffectiveStatuses, isTableExpired } from "./utils/tableStatus";
-import { createUUID, getOrCreateCurrentUser, resetLocalCurrentUser, saveCurrentUser } from "./utils/storage";
+import { getOrCreateCurrentUser, saveCurrentUser } from "./utils/storage";
 import "./index.css";
 
 function getMemberRange(memberType: MahjongTable["memberType"]): {
@@ -38,8 +38,21 @@ function isNicknameValid(nickname: string): boolean {
 }
 
 function getReadableErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message.trim()) {
-    return `${fallback} (${error.message})`;
+  if (error instanceof Error) {
+    const message = error.message.trim();
+    const knownMessages = new Set([
+      "닉네임을 먼저 설정해주세요.",
+      "이미 참가한 탁입니다.",
+      "이미 모집 인원이 가득 찼습니다.",
+      "마감된 탁에는 참가할 수 없습니다.",
+      "시간이 지난 탁에는 참가할 수 없습니다.",
+      "생성자는 나가기 대신 탁 취소를 사용할 수 있습니다.",
+      "참가 중인 탁이 아닙니다.",
+      "이미 종료된 시간으로는 탁을 생성할 수 없습니다.",
+    ]);
+    if (knownMessages.has(message)) {
+      return message;
+    }
   }
   return fallback;
 }
@@ -73,12 +86,7 @@ function App() {
         await refreshFromServer();
       } catch (error) {
         console.error(error);
-        setMessage(
-          getReadableErrorMessage(
-            error,
-            "Supabase 데이터를 불러오지 못했습니다. 환경변수와 권한 설정을 확인해주세요.",
-          ),
-        );
+        setMessage("데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
       } finally {
         setLoading(false);
       }
@@ -164,12 +172,6 @@ function App() {
     setMessage("닉네임이 저장되었습니다.");
   };
 
-  const handleRegenerateUserId = () => {
-    if (!window.confirm("로컬 사용자 정보를 초기화할까요?")) return;
-    setCurrentUser((prev) => ({ ...prev, userId: createUUID() }));
-    setMessage("로컬 사용자 ID가 초기화되었습니다.");
-  };
-
   const handleCreateTable = async (input: CreateTableInput) => {
     if (!isNicknameValid(currentUser.nickname)) {
       setMessage("닉네임을 먼저 설정해주세요.");
@@ -215,7 +217,7 @@ function App() {
       setMessage("친선탁이 생성되었습니다.");
     } catch (error) {
       console.error(error);
-      setMessage(getReadableErrorMessage(error, "친선탁 생성에 실패했습니다."));
+      setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
     } finally {
       setActionLoading(false);
     }
@@ -251,7 +253,7 @@ function App() {
       setMessage("탁에 참가했습니다.");
     } catch (error) {
       console.error(error);
-      setMessage(getReadableErrorMessage(error, "참가에 실패했습니다."));
+      setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
     } finally {
       setActionLoading(false);
     }
@@ -281,7 +283,7 @@ function App() {
       setMessage("탁에서 나갔습니다.");
     } catch (error) {
       console.error(error);
-      setMessage(getReadableErrorMessage(error, "나가기에 실패했습니다."));
+      setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
     } finally {
       setActionLoading(false);
     }
@@ -295,7 +297,7 @@ function App() {
       setMessage("모집이 마감되었습니다.");
     } catch (error) {
       console.error(error);
-      setMessage(getReadableErrorMessage(error, "모집 마감에 실패했습니다."));
+      setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
     } finally {
       setActionLoading(false);
     }
@@ -310,17 +312,10 @@ function App() {
       setMessage("탁이 취소되었습니다.");
     } catch (error) {
       console.error(error);
-      setMessage(getReadableErrorMessage(error, "탁 취소에 실패했습니다."));
+      setMessage(getReadableErrorMessage(error, "요청을 처리하지 못했습니다. 다시 시도해주세요."));
     } finally {
       setActionLoading(false);
     }
-  };
-
-  const handleResetLocalUser = () => {
-    if (!window.confirm("로컬 사용자 정보(userId, 닉네임)를 초기화할까요?")) return;
-    const resetUser = resetLocalCurrentUser();
-    setCurrentUser(resetUser);
-    setMessage("로컬 사용자 정보가 초기화되었습니다.");
   };
 
   const handleCopyShareText = async (tableId: string) => {
@@ -416,12 +411,7 @@ function App() {
       <NicknameBox
         currentUser={currentUser}
         onSaveNickname={handleSaveNickname}
-        onRegenerateUserId={handleRegenerateUserId}
       />
-
-      {!isNicknameValid(currentUser.nickname) && (
-        <p className="warning">닉네임을 먼저 설정해주세요.</p>
-      )}
 
       {selectedTable ? (
         <TableDetail
@@ -455,12 +445,6 @@ function App() {
           />
         </>
       )}
-
-      <footer className="footer-tools">
-        <button type="button" className="btn-ghost small" onClick={handleResetLocalUser}>
-          로컬 사용자 정보 초기화
-        </button>
-      </footer>
     </div>
   );
 }
