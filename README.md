@@ -166,8 +166,6 @@ Vercel SPA 라우팅을 위해 `vercel.json` rewrite 설정을 사용합니다.
 - `og:image`: `/og-image.png`
 - `twitter:card`: `summary_large_image`
 
-> 일부 플랫폼(특히 메신저)은 링크 미리보기 캐시가 강하게 적용됩니다.  
-> 메타태그 수정 직후 반영이 지연될 수 있습니다.
 
 ## 보안/운영 주의
 
