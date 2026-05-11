@@ -41,7 +41,7 @@ jobs:
 
     steps:
       - name: Dependency review
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
 
   scheduled-alert:
     if: ${{ always() && github.event_name == 'schedule' && needs.npm-audit.result != 'success' }}
