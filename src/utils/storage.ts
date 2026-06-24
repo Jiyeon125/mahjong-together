@@ -3,14 +3,22 @@ import type { CurrentUser } from "../types";
 const CURRENT_USER_KEY = "currentUser";
 
 function fallbackUUID(): string {
-  const timestamp = Date.now().toString(16);
-  const random = Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join(
-    "",
-  );
-  return `${timestamp.slice(0, 8)}-${random.slice(0, 4)}-${random.slice(
-    4,
+  if (typeof crypto === "undefined" || typeof crypto.getRandomValues !== "function") {
+    throw new Error("Secure random generator is unavailable in this environment.");
+  }
+
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+
+  // RFC4122 v4: set version (4) and variant (10xx)
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0"));
+  return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(
     8,
-  )}-${random.slice(8, 12)}-${random.slice(12, 24)}`;
+    10,
+  ).join("")}-${hex.slice(10, 16).join("")}`;
 }
 
 export function createUUID(): string {
