@@ -25,7 +25,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 22.22.1
           cache: npm
 
       - name: Install dependencies
@@ -42,6 +42,8 @@ jobs:
     steps:
       - name: Dependency review
         uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
 
   scheduled-alert:
     if: ${{ always() && github.event_name == 'schedule' && needs.npm-audit.result != 'success' }}
@@ -65,10 +67,24 @@ jobs:
               "## 대응 참고",
               "- `docs/security-incident-response.md`"
             ].join("\n");
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title,
-              body,
-              labels: ["security", "incident", "automated"]
-            });
+            try {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["security", "incident", "automated"],
+              });
+            } catch (error) {
+              // 레이블이 없어도 알림 이슈는 생성한다.
+              if (error?.status === 422) {
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title,
+                  body,
+                });
+                return;
+              }
+              throw error;
+            }
